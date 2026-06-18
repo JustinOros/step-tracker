@@ -319,7 +319,54 @@
     color: var(--danger);
     border: 1.5px solid var(--danger);
   }
+  .btn-danger:hover { background: rgba(255,107,107,0.1); }
   .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+  /* ── FRIEND ROW WITH CHECKBOX ── */
+  .friend-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    transition: border-color 0.15s;
+    margin-bottom: 8px;
+  }
+  .friend-row:hover { border-color: var(--teal-glow); }
+  .friend-row.selected { border-color: var(--teal); background: var(--teal-dim); }
+  .friend-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--teal);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+  .friend-row .fr-date {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .friend-row .fr-info { flex: 1; min-width: 0; cursor: pointer; }
+  .friend-row .fr-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .friend-row .fr-nick {
+    font-size: 12px;
+    color: var(--teal);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   /* ── ALERT / INFO BOXES ── */
   .info-box {
@@ -1205,46 +1252,50 @@
       <!-- PANEL: FRIENDS -->
       <div id="panel-friends" class="panel">
 
-        <!-- Friends' steps leaderboard -->
-        <div class="section-header">
-          <div class="section-title">Friends' Steps</div>
-        </div>
-        <div id="friends-steps-list" class="friends-list" style="margin-bottom:28px">
-          <div class="loader-full" style="padding:40px 0;flex:none">
-            <div class="spinner" style="width:24px;height:24px;border-width:2px;color:var(--teal)"></div>
-          </div>
-        </div>
         <!-- Pending received requests -->
-        <div id="pending-received-section" style="display:none">
+        <div id="pending-received-section" style="display:none;margin-bottom:20px">
           <div class="section-header">
             <div class="section-title">Friend Requests</div>
           </div>
           <div id="pending-received-list"></div>
         </div>
 
-        <!-- Add friend -->
-        <div class="add-friend-panel">
-          <h3>Add a Friend</h3>
-          <div class="add-friend-row">
-            <input type="email" id="add-friend-email" placeholder="friend@email.com">
-            <button class="btn btn-primary btn-sm" onclick="sendFriendRequest()">Send Request</button>
-          </div>
-          <div class="error-msg" id="add-friend-error" style="display:none;margin-top:8px;margin-bottom:0"></div>
+        <!-- Friends header: search, sort, select all, + button -->
+        <div class="section-header" style="margin-bottom:12px">
+          <div class="section-title">My Friends</div>
+          <button class="btn btn-primary btn-sm" onclick="openInviteModal()" style="width:auto;gap:6px">
+            <span style="font-size:18px;line-height:1">+</span> Invite
+          </button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input type="text" id="friends-search" placeholder="Search friends…" style="margin-bottom:0;flex:1" oninput="renderFriendsPanel()">
+          <select id="friends-sort" onchange="renderFriendsPanel()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--white);font-family:var(--font-body);font-size:14px;padding:11px 12px;outline:none;cursor:pointer">
+            <option value="date">Date Added</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:0 2px">
+          <input type="checkbox" id="select-all-friends" onchange="toggleSelectAll(this.checked)" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0">
+          <label for="select-all-friends" style="font-size:13px;color:var(--muted);cursor:pointer;user-select:none">Select all</label>
+          <button class="btn btn-danger btn-sm" id="bulk-remove-btn" onclick="bulkRemoveFriends()" style="display:none;margin-left:auto;width:auto">Remove Selected</button>
+        </div>
+
+        <div id="friends-manage-list" class="friends-list"></div>
+
+        <div id="friends-show-more" style="display:none;text-align:center;margin-top:16px">
+          <button class="btn btn-ghost" onclick="showMoreFriends()" style="width:auto">Show More…</button>
         </div>
 
         <!-- Sent requests -->
-        <div id="pending-sent-section" style="display:none">
+        <div id="pending-sent-section" style="display:none;margin-top:24px">
           <div class="section-header">
-            <div class="section-title">Sent Requests</div>
+            <div class="section-title">Sent Invites</div>
           </div>
           <div id="pending-sent-list" class="friends-list" style="margin-bottom:24px"></div>
         </div>
 
-        <!-- Confirmed friends -->
-        <div class="section-header">
-          <div class="section-title">My Friends</div>
-        </div>
-        <div id="friends-manage-list" class="friends-list"></div>
       </div>
 
       <!-- PANEL: SETTINGS / WEBHOOK -->
@@ -1312,6 +1363,67 @@
 
     </div><!-- /container -->
 
+  </div>
+
+  <!-- INVITE MODAL -->
+  <div class="modal-overlay" id="invite-modal" onclick="closeInviteModalOutside(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h3>Invite a Friend</h3>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">Share this message with a friend. When they tap the link they'll be taken straight to StepMates.</p>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.7;margin-bottom:20px;color:var(--white)" id="invite-message-preview"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeInviteModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="shareInvite()">Share Invite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRIEND PROFILE SCREEN -->
+  <div id="screen-friend-profile" class="screen" style="background:var(--bg)">
+    <nav>
+      <button class="btn btn-ghost btn-sm" onclick="closeFriendProfile()" style="width:auto;gap:6px">← Back</button>
+      <div class="nav-logo">Step<span>Mates</span></div>
+      <div style="width:80px"></div>
+    </nav>
+    <div class="container" style="padding-top:32px;padding-bottom:40px;max-width:480px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div id="fp-avatar" style="width:80px;height:80px;border-radius:50%;background:var(--teal-dim);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:32px;color:var(--teal);margin:0 auto 16px;overflow:hidden"></div>
+        <div id="fp-name" onclick="openNicknameModal()" style="font-family:var(--font-display);font-size:26px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+          <span id="fp-name-text">—</span>
+          <span style="font-size:14px;color:var(--teal);font-weight:500">✏️</span>
+        </div>
+        <div id="fp-nickname-shown" style="font-size:13px;color:var(--muted);margin-top:2px;display:none"></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
+        <div style="display:flex;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:14px">Joined StepMates</span>
+          <span style="font-size:14px;font-weight:500" id="fp-joined">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:14px 18px">
+          <span style="color:var(--muted);font-size:14px">Avg. steps per day</span>
+          <span style="font-size:14px;font-weight:500" id="fp-avg">—</span>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" style="width:100%" onclick="removeFriendFromProfile()" id="fp-remove-btn">Remove Friend</button>
+    </div>
+  </div>
+
+  <!-- NICKNAME MODAL -->
+  <div class="modal-overlay" id="nickname-modal" onclick="closeNicknameModalOutside(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h3>Set Nickname</h3>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:20px">Only you see this. Leave blank to use their display name.</p>
+      <label for="nickname-input">Nickname</label>
+      <input type="text" id="nickname-input" placeholder="e.g. John from Accounting" maxlength="30">
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeNicknameModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNickname()">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- PROFILE MODAL -->
@@ -1623,12 +1735,14 @@ window.finishOnboarding = async function() {
 // ─────────────────────────────────────────────
 function loadDashboard() {
   showScreen('dashboard');
+  nicknames = currentUserData.nicknames || {};
   refreshProfileUI();
   document.getElementById('settings-email').textContent = currentUser.email;
   document.getElementById('settings-webhook-url').textContent = buildWebhookUrl(currentUserData.webhookToken);
   renderMySteps();
   loadFriends();
   checkSetupReminder();
+  handleInviteLink();
 }
 
 function refreshProfileUI() {
@@ -1834,8 +1948,15 @@ function loadFriends() {
   friendUnsubscribers.push(unsubReceived);
 }
 
+let friendsVisibleCount = 10;
+let nicknames = {};
+
+function getFriendName(f) {
+  return nicknames[f.uid] || f.displayName || 'No Display Name';
+}
+
 function avatarHtml(f, size=44) {
-  const name = f.displayName || f.email || '?';
+  const name = f.displayName || '?';
   const initial = name[0].toUpperCase();
   const url = f.avatarUrl || '';
   if (url) {
@@ -1846,18 +1967,20 @@ function avatarHtml(f, size=44) {
 
 function renderFriendSteps() {
   const el = document.getElementById('friends-steps-list');
+  if (!el) return;
   if (friendsList.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">👣</div><h3>No friends yet</h3><p>Add friends using their email to see their steps here.</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">👣</div><h3>No friends yet</h3><p>Invite friends to see their steps here.</p></div>`;
     return;
   }
   const sorted = [...friendsList].sort((a,b) => getStepsForPeriod(b.stepsByDate, currentTab) - getStepsForPeriod(a.stepsByDate, currentTab));
   el.innerHTML = sorted.map(f => {
     const steps = getStepsForPeriod(f.stepsByDate, currentTab);
+    const name = getFriendName(f);
     return `
-      <div class="friend-card">
+      <div class="friend-card" onclick="openFriendProfile('${f.uid}')" style="cursor:pointer">
         ${avatarHtml(f)}
         <div class="friend-info">
-          <div class="friend-name">${esc(f.displayName || f.email)}</div>
+          <div class="friend-name">${esc(name)}</div>
           <div class="friend-steps-sub">${TAB_LABELS[currentTab]}</div>
         </div>
         <div class="friend-steps">${steps.toLocaleString()}</div>
@@ -1894,7 +2017,7 @@ function renderFriendsPanel() {
         <div class="friend-avatar" style="border-color:var(--amber);color:var(--amber)">${(req.toEmail||'?')[0].toUpperCase()}</div>
         <div class="friend-info">
           <div class="friend-name">${esc(req.toEmail)}</div>
-          <div class="friend-steps-sub">Request pending…</div>
+          <div class="friend-steps-sub">Invite pending…</div>
         </div>
       </div>`).join('');
   } else {
@@ -1902,23 +2025,46 @@ function renderFriendsPanel() {
   }
 
   const fml = document.getElementById('friends-manage-list');
-  if (friendsList.length === 0) {
-    fml.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="es-icon">🤝</div><h3>No friends yet</h3><p>Send a request above to add your first StepMate.</p></div>`;
+  const search = (document.getElementById('friends-search')?.value || '').toLowerCase();
+  const sortBy = document.getElementById('friends-sort')?.value || 'date';
+
+  let filtered = friendsList.filter(f => {
+    const name = getFriendName(f).toLowerCase();
+    const display = (f.displayName || '').toLowerCase();
+    return !search || name.includes(search) || display.includes(search);
+  });
+
+  if (sortBy === 'name') {
+    filtered.sort((a,b) => getFriendName(a).localeCompare(getFriendName(b)));
   } else {
-    const sortedByAdded = [...friendsList].sort((a,b) => (b.addedAt || 0) - (a.addedAt || 0));
-    fml.innerHTML = sortedByAdded.map(f => {
-      const steps = getStepsForPeriod(f.stepsByDate, currentTab);
-      return `
-        <div class="friend-card">
-          ${avatarHtml(f)}
-          <div class="friend-info">
-            <div class="friend-name">${esc(f.displayName || f.email)}</div>
-            <div class="friend-steps-sub">${steps.toLocaleString()} steps today</div>
-          </div>
-          <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);flex-shrink:0" onclick="removeFriend('${f.uid}','${esc(f.displayName || f.email)}')">Remove</button>
-        </div>`;
-    }).join('');
+    filtered.sort((a,b) => (b.addedAt || 0) - (a.addedAt || 0));
   }
+
+  if (filtered.length === 0) {
+    fml.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="es-icon">🤝</div><h3>${search ? 'No matches' : 'No friends yet'}</h3><p>${search ? 'Try a different search.' : 'Tap + Invite to add your first StepMate.'}</p></div>`;
+    document.getElementById('friends-show-more').style.display = 'none';
+    return;
+  }
+
+  const visible = filtered.slice(0, friendsVisibleCount);
+  fml.innerHTML = visible.map(f => {
+    const nick = nicknames[f.uid] || '';
+    const displayName = f.displayName || 'No Display Name';
+    const addedDate = f.addedAt ? new Date(f.addedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+    return `
+      <div class="friend-row" id="fr-${f.uid}">
+        <input type="checkbox" id="chk-${f.uid}" onclick="onFriendCheck(event,'${f.uid}')">
+        <span class="fr-date">${addedDate}</span>
+        ${avatarHtml(f, 36)}
+        <div class="fr-info" onclick="openFriendProfile('${f.uid}')">
+          <div class="fr-name">${esc(nick || displayName)}</div>
+          ${nick ? `<div class="fr-nick">${esc(displayName)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('friends-show-more').style.display = filtered.length > friendsVisibleCount ? 'block' : 'none';
+  updateBulkRemoveBtn();
 }
 
 function updateBadge() {
@@ -1931,91 +2077,188 @@ function updateBadge() {
   }
 }
 
-window.sendFriendRequest = async function() {
-  const emailInput = document.getElementById('add-friend-email');
-  const errEl = document.getElementById('add-friend-error');
-  const btn = document.querySelector('#panel-friends .add-friend-row .btn');
-  const email = emailInput.value.trim().toLowerCase();
-  errEl.style.display = 'none';
-  errEl.style.color = '';
+window.onFriendCheck = function(e, uid) {
+  e.stopPropagation();
+  const row = document.getElementById('fr-' + uid);
+  const chk = document.getElementById('chk-' + uid);
+  row.classList.toggle('selected', chk.checked);
+  updateBulkRemoveBtn();
+  const allChk = document.getElementById('select-all-friends');
+  const allChecked = friendsList.every(f => document.getElementById('chk-' + f.uid)?.checked);
+  if (allChk) allChk.checked = allChecked;
+}
 
-  if (!email || !/\S+@\S+\.\S+/.test(email)) {
-    errEl.textContent = 'Please enter a valid email.';
-    errEl.style.display = 'block';
-    return;
-  }
-  if (email === currentUser.email.toLowerCase()) {
-    errEl.textContent = "That's your own email!";
-    errEl.style.display = 'block';
-    return;
-  }
+function updateBulkRemoveBtn() {
+  const anyChecked = friendsList.some(f => document.getElementById('chk-' + f.uid)?.checked);
+  document.getElementById('bulk-remove-btn').style.display = anyChecked ? 'inline-flex' : 'none';
+}
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-
-  const usersQ = query(collection(db, 'users'), where('email', '==', email));
-  const snap = await getDocs(usersQ);
-  if (snap.empty) {
-    errEl.textContent = 'No StepMates account found for that email.';
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = 'Send Request';
-    return;
-  }
-
-  const toUser = snap.docs[0];
-  const toUid = toUser.id;
-
-  const existingQ = query(collection(db, 'friendRequests'),
-    where('fromUid', '==', currentUser.uid),
-    where('toUid', '==', toUid)
-  );
-  const existingSnap = await getDocs(existingQ);
-  if (!existingSnap.empty) {
-    errEl.textContent = 'You already sent a request to this person.';
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = 'Send Request';
-    return;
-  }
-
-  await addDoc(collection(db, 'friendRequests'), {
-    fromUid: currentUser.uid,
-    fromEmail: currentUser.email,
-    fromName: currentUserData.displayName || currentUser.email,
-    toUid,
-    toEmail: email,
-    status: 'pending',
-    createdAt: serverTimestamp()
+window.toggleSelectAll = function(checked) {
+  friendsList.forEach(f => {
+    const chk = document.getElementById('chk-' + f.uid);
+    const row = document.getElementById('fr-' + f.uid);
+    if (chk) chk.checked = checked;
+    if (row) row.classList.toggle('selected', checked);
   });
-
-  emailInput.value = '';
-  btn.disabled = false;
-  btn.innerHTML = 'Send Request';
-  errEl.textContent = '✓ Friend request sent!';
-  errEl.style.color = 'var(--success)';
-  errEl.style.display = 'block';
-  setTimeout(() => { errEl.style.display = 'none'; }, 4000);
-  await loadFriends();
+  updateBulkRemoveBtn();
 }
 
-window.respondRequest = async function(requestId, status) {
-  await updateDoc(doc(db, 'friendRequests', requestId), { status });
-  showToast(status === 'accepted' ? 'Friend added! 🎉' : 'Request declined', status === 'accepted' ? 'success' : '');
-  await loadFriends();
+window.showMoreFriends = function() {
+  friendsVisibleCount += 10;
+  renderFriendsPanel();
 }
 
-window.removeFriend = async function(friendUid, friendName) {
-  if (!confirm(`Remove ${friendName} from your friends?`)) return;
+window.bulkRemoveFriends = async function() {
+  const selected = friendsList.filter(f => document.getElementById('chk-' + f.uid)?.checked);
+  if (!selected.length) return;
+  const names = selected.map(f => getFriendName(f)).join(', ');
+  if (!confirm(`Remove ${selected.length} friend${selected.length > 1 ? 's' : ''}?\n${names}`)) return;
+  for (const f of selected) await doRemoveFriend(f.uid);
+  showToast(`${selected.length} friend${selected.length > 1 ? 's' : ''} removed`, '');
+  document.getElementById('select-all-friends').checked = false;
+}
+
+async function doRemoveFriend(friendUid) {
   const uid = currentUser.uid;
   const frRef = collection(db, 'friendRequests');
   const q1 = query(frRef, where('fromUid', '==', uid), where('toUid', '==', friendUid));
   const q2 = query(frRef, where('fromUid', '==', friendUid), where('toUid', '==', uid));
   const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-  const deletes = [...s1.docs, ...s2.docs].map(d => updateDoc(doc(db, 'friendRequests', d.id), { status: 'removed' }));
-  await Promise.all(deletes);
-  showToast(`${friendName} removed`, '');
-  await loadFriends();
+  await Promise.all([...s1.docs, ...s2.docs].map(d => updateDoc(doc(db, 'friendRequests', d.id), { status: 'removed' })));
+  delete nicknames[friendUid];
+  await updateDoc(doc(db, 'users', currentUser.uid), { nicknames });
+}
+
+window.respondRequest = async function(requestId, status) {
+  await updateDoc(doc(db, 'friendRequests', requestId), { status });
+  showToast(status === 'accepted' ? 'Friend added! 🎉' : 'Request declined', status === 'accepted' ? 'success' : '');
+}
+
+// ─────────────────────────────────────────────
+// FRIEND PROFILE
+// ─────────────────────────────────────────────
+let currentFriendProfile = null;
+
+window.openFriendProfile = function(uid) {
+  const f = friendsList.find(x => x.uid === uid);
+  if (!f) return;
+  currentFriendProfile = f;
+  const name = getFriendName(f);
+  const displayName = f.displayName || 'No Display Name';
+  const nick = nicknames[uid] || '';
+
+  const avatarEl = document.getElementById('fp-avatar');
+  if (f.avatarUrl) {
+    avatarEl.innerHTML = `<img src="${esc(f.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    avatarEl.textContent = displayName[0].toUpperCase();
+  }
+
+  document.getElementById('fp-name-text').textContent = nick || displayName;
+  const nickShown = document.getElementById('fp-nickname-shown');
+  if (nick) {
+    nickShown.textContent = displayName;
+    nickShown.style.display = 'block';
+  } else {
+    nickShown.style.display = 'none';
+  }
+
+  const joined = f.createdAt?.toDate ? f.createdAt.toDate() : (f.createdAt ? new Date(f.createdAt) : null);
+  document.getElementById('fp-joined').textContent = joined ? joined.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }) : '—';
+
+  const steps = Object.values(f.stepsByDate || {});
+  const days = Object.keys(f.stepsByDate || {}).length;
+  const avg = days > 0 ? Math.round(steps.reduce((a,b) => a+b, 0) / days) : 0;
+  document.getElementById('fp-avg').textContent = avg.toLocaleString() + ' steps';
+
+  showScreen('friend-profile');
+}
+
+window.closeFriendProfile = function() {
+  showScreen('dashboard');
+  switchPanel('friends');
+}
+
+window.removeFriendFromProfile = async function() {
+  if (!currentFriendProfile) return;
+  const name = getFriendName(currentFriendProfile);
+  if (!confirm(`Remove ${name} from your friends?`)) return;
+  await doRemoveFriend(currentFriendProfile.uid);
+  showToast(`${name} removed`, '');
+  closeFriendProfile();
+}
+
+// ─────────────────────────────────────────────
+// NICKNAME MODAL
+// ─────────────────────────────────────────────
+window.openNicknameModal = function() {
+  const uid = currentFriendProfile?.uid;
+  if (!uid) return;
+  document.getElementById('nickname-input').value = nicknames[uid] || '';
+  document.getElementById('nickname-modal').classList.add('open');
+  setTimeout(() => document.getElementById('nickname-input').focus(), 300);
+}
+
+window.closeNicknameModal = function() {
+  document.getElementById('nickname-modal').classList.remove('open');
+}
+
+window.closeNicknameModalOutside = function(e) {
+  if (e.target === document.getElementById('nickname-modal')) closeNicknameModal();
+}
+
+window.saveNickname = async function() {
+  const uid = currentFriendProfile?.uid;
+  if (!uid) return;
+  const val = document.getElementById('nickname-input').value.trim();
+  if (val) nicknames[uid] = val;
+  else delete nicknames[uid];
+  await updateDoc(doc(db, 'users', currentUser.uid), { nicknames });
+  currentUserData.nicknames = nicknames;
+  closeNicknameModal();
+  openFriendProfile(uid);
+  renderFriendsPanel();
+  renderFriendSteps();
+  showToast(val ? 'Nickname saved ✓' : 'Nickname cleared', 'success');
+}
+
+// ─────────────────────────────────────────────
+// INVITE MODAL
+// ─────────────────────────────────────────────
+window.openInviteModal = async function() {
+  const token = generateToken().substring(0, 12);
+  const inviteUrl = `${APP_URL}?invite=${token}&from=${currentUser.uid}`;
+  await setDoc(doc(db, 'invites', token), {
+    fromUid: currentUser.uid,
+    fromName: currentUserData.displayName || 'Someone',
+    createdAt: serverTimestamp(),
+    expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000)
+  });
+  const name = currentUserData.displayName || 'Someone';
+  const msg = `${name} has invited you to join them on StepMates — a free step tracker that syncs steps from your phone and lets you compete with friends.\n\nTap the link to get started:\n${inviteUrl}`;
+  document.getElementById('invite-message-preview').textContent = msg;
+  document.getElementById('invite-modal').dataset.url = inviteUrl;
+  document.getElementById('invite-modal').dataset.msg = msg;
+  document.getElementById('invite-modal').classList.add('open');
+}
+
+window.closeInviteModal = function() {
+  document.getElementById('invite-modal').classList.remove('open');
+}
+
+window.closeInviteModalOutside = function(e) {
+  if (e.target === document.getElementById('invite-modal')) closeInviteModal();
+}
+
+window.shareInvite = function() {
+  const msg = document.getElementById('invite-modal').dataset.msg;
+  if (navigator.share) {
+    navigator.share({ text: msg });
+  } else {
+    navigator.clipboard.writeText(msg);
+    showToast('Invite copied to clipboard ✓', 'success');
+  }
+  closeInviteModal();
 }
 
 // ─────────────────────────────────────────────
@@ -2163,6 +2406,53 @@ window.saveProfile = async function() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = 'Save changes';
+  }
+}
+
+// ─────────────────────────────────────────────
+// INVITE LINK HANDLER
+// ─────────────────────────────────────────────
+async function handleInviteLink() {
+  const params = new URLSearchParams(window.location.search);
+  const inviteToken = params.get('invite');
+  const fromUid = params.get('from');
+  if (!inviteToken || !fromUid || fromUid === currentUser.uid) return;
+  window.history.replaceState({}, document.title, APP_URL);
+  try {
+    const inviteRef = doc(db, 'invites', inviteToken);
+    const inviteSnap = await getDoc(inviteRef);
+    if (!inviteSnap.exists()) return;
+    const invite = inviteSnap.data();
+    if (invite.expiresAt.toDate() < new Date()) {
+      showToast('This invite link has expired.', 'error');
+      return;
+    }
+    const existingQ = query(collection(db, 'friendRequests'),
+      where('fromUid', '==', fromUid),
+      where('toUid', '==', currentUser.uid)
+    );
+    const existing = await getDocs(existingQ);
+    if (!existing.empty) {
+      const req = existing.docs[0];
+      if (req.data().status !== 'accepted') {
+        await updateDoc(doc(db, 'friendRequests', req.id), { status: 'accepted' });
+        showToast(`You and ${invite.fromName} are now StepMates! 🎉`, 'success');
+      }
+      return;
+    }
+    await addDoc(collection(db, 'friendRequests'), {
+      fromUid,
+      fromEmail: '',
+      fromName: invite.fromName,
+      toUid: currentUser.uid,
+      toEmail: currentUser.email,
+      status: 'accepted',
+      createdAt: serverTimestamp()
+    });
+    showToast(`You and ${invite.fromName} are now StepMates! 🎉`, 'success');
+    loadFriends();
+  } catch(e) {
+    console.error('Invite error:', e);
   }
 }
 
