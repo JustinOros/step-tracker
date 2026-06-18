@@ -1013,6 +1013,21 @@
     </div>
   </div>
 
+  <!-- CONFIRM EMAIL (magic link opened on different device) -->
+  <div id="screen-confirm" class="screen">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;background:radial-gradient(ellipse at 50% 0%,rgba(0,201,177,0.08) 0%,transparent 60%),var(--bg)">
+      <div style="width:100%;max-width:400px">
+        <div style="font-size:48px;text-align:center;margin-bottom:20px">✉️</div>
+        <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;margin-bottom:8px;text-align:center">Confirm your email</h2>
+        <p style="color:var(--muted);font-size:15px;text-align:center;margin-bottom:28px;line-height:1.6">You opened this link on a different device. Enter your email to complete sign-in.</p>
+        <label for="confirm-email-input">Email address</label>
+        <input type="email" id="confirm-email-input" placeholder="you@example.com" autocomplete="email">
+        <div class="error-msg" id="confirm-email-error" style="display:none"></div>
+        <button class="btn btn-primary" id="confirm-email-btn" onclick="confirmEmailSignIn()">Sign in</button>
+      </div>
+    </div>
+  </div>
+
   <!-- PENDING APPROVAL -->
   <div id="screen-pending" class="screen">
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(0,201,177,0.06) 0%,transparent 60%),var(--bg)">
@@ -1397,8 +1412,9 @@ window.sendMagicLink = async function() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Sending…';
   try {
+    const continueUrl = APP_URL + '?email=' + encodeURIComponent(email);
     await sendSignInLinkToEmail(auth, email, {
-      url: APP_URL,
+      url: continueUrl,
       handleCodeInApp: true
     });
     localStorage.setItem('emailForSignIn', email);
@@ -1426,9 +1442,12 @@ window.showAuthForm = function() {
 // ─────────────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
   if (isSignInWithEmailLink(auth, window.location.href)) {
-    let email = localStorage.getItem('emailForSignIn');
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email') || localStorage.getItem('emailForSignIn');
     if (!email) {
-      email = window.prompt('Please confirm your email:');
+      showScreen('confirm');
+      document.getElementById('confirm-email-input').focus();
+      return;
     }
     try {
       const result = await signInWithEmailLink(auth, email, window.location.href);
@@ -1450,6 +1469,30 @@ onAuthStateChanged(auth, async (user) => {
     showScreen('auth');
   }
 });
+
+window.confirmEmailSignIn = async function() {
+  const email = document.getElementById('confirm-email-input').value.trim();
+  const errEl = document.getElementById('confirm-email-error');
+  const btn = document.getElementById('confirm-email-btn');
+  errEl.style.display = 'none';
+  if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const result = await signInWithEmailLink(auth, email, window.location.href);
+    window.history.replaceState({}, document.title, APP_URL);
+    await initUser(result.user);
+  } catch(e) {
+    errEl.textContent = 'That email doesn\'t match this sign-in link. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Sign in';
+  }
+}
 
 async function initUser(user) {
   currentUser = user;
@@ -2051,6 +2094,10 @@ function esc(str) {
 // Allow Enter key on auth email input
 document.getElementById('auth-email').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendMagicLink();
+});
+
+document.getElementById('confirm-email-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmEmailSignIn();
 });
 
 document.getElementById('profile-name-input').addEventListener('input', updateProfilePreview);
