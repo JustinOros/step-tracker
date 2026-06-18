@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0F1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>StepMates — Walk Together</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0F1923;
+    --surface: #182433;
+    --surface2: #1E2E40;
+    --border: #2A3D52;
+    --teal: #00C9B1;
+    --teal-dim: rgba(0,201,177,0.12);
+    --teal-glow: rgba(0,201,177,0.25);
+    --amber: #FFB347;
+    --white: #F8F9FA;
+    --muted: #8899A6;
+    --danger: #FF6B6B;
+    --success: #4ECA8B;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex-direction: column; min-height: 100vh; }
+  .screen.active { display: flex; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--teal);
+    letter-spacing: -0.5px;
+  }
+  .nav-logo span { color: var(--white); }
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--teal-dim);
+    border: 1.5px solid var(--teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--teal);
+    cursor: pointer;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 500;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 24px 24px max(24px, env(safe-area-inset-bottom));
+    width: 100%;
+    max-width: 520px;
+    transform: translateY(40px);
+    transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .modal h3 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .modal-avatar-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .modal-avatar-preview .avatar-lg {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--teal);
+    background: var(--teal-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--teal);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .modal-avatar-preview .avatar-lg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .modal-avatar-preview .avatar-preview-text {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .modal-avatar-preview .avatar-preview-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--white);
+    margin-bottom: 2px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .modal-actions .btn { flex: 1; }
+
+  /* ── SAFE AREA / MOBILE ── */
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .dashboard-content {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* ── TOUCH TARGETS ── */
+  .btn { min-height: 46px; }
+  .btn-sm { min-height: 38px; }
+  .tab-btn { min-height: 38px; }
+  .bn-item { min-height: 56px; }
+
+  /* ── CONTAINERS ── */
+  .container {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ── AUTH SCREEN ── */
+  #screen-auth {
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,201,177,0.08) 0%, transparent 60%), var(--bg);
+    padding: 40px 20px;
+  }
+  .auth-box {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+  .auth-logo {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--teal);
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .auth-logo span { color: var(--white); }
+  .auth-tagline {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 48px;
+  }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    text-align: left;
+  }
+  .auth-card h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .auth-card p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* ── FORMS ── */
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  input[type="email"],
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 16px;
+  }
+  input:focus {
+    border-color: var(--teal);
+  }
+  input::placeholder { color: var(--muted); opacity: 0.6; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s, transform 0.1s;
+    text-decoration: none;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--teal);
+    color: var(--bg);
+    width: 100%;
+  }
+  .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1.5px solid var(--danger);
+  }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+  /* ── ALERT / INFO BOXES ── */
+  .info-box {
+    background: var(--teal-dim);
+    border: 1px solid var(--teal-glow);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 14px;
+    color: var(--teal);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .warning-box {
+    background: rgba(255,179,71,0.1);
+    border: 1px solid rgba(255,179,71,0.25);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 14px;
+    color: var(--amber);
+    margin-bottom: 20px;
+  }
+  .error-msg {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: -10px;
+    margin-bottom: 14px;
+  }
+
+  /* ── ONBOARDING ── */
+  #screen-onboarding {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,201,177,0.06) 0%, transparent 60%), var(--bg);
+  }
+  .onboarding-box {
+    width: 100%;
+    max-width: 480px;
+  }
+  .step-indicator {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+  .step-dot {
+    height: 3px;
+    flex: 1;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .step-dot.done { background: var(--teal); }
+  .onboarding-step { display: none; }
+  .onboarding-step.active { display: block; }
+  .onboarding-step h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .onboarding-step .sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  /* ── BRIDGE APP CARDS ── */
+  .bridge-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .bridge-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-decoration: none;
+    color: var(--white);
+    transition: border-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .bridge-card:hover { border-color: var(--teal); }
+  .bridge-card .bc-icon { font-size: 28px; }
+  .bridge-card .bc-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .bridge-card .bc-platform {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .bridge-card .bc-badge {
+    font-size: 11px;
+    background: var(--teal-dim);
+    color: var(--teal);
+    padding: 2px 8px;
+    border-radius: 20px;
+    width: fit-content;
+  }
+
+  /* ── WEBHOOK URL BOX ── */
+  .webhook-box {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .webhook-box .wh-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .webhook-url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .webhook-url {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--teal);
+    background: var(--surface2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+  }
+  .copy-btn {
+    background: var(--teal-dim);
+    border: 1px solid var(--teal-glow);
+    color: var(--teal);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s;
+    white-space: nowrap;
+    font-family: var(--font-display);
+  }
+  .copy-btn:hover { background: var(--teal-glow); }
+  .copy-btn.copied { color: var(--success); border-color: var(--success); background: rgba(78,202,139,0.1); }
+
+  /* ── DASHBOARD ── */
+  #screen-dashboard {
+    background: var(--bg);
+  }
+  .dashboard-content {
+    padding: 28px 0 80px;
+  }
+
+  /* ── MY STEPS CARD ── */
+  .my-steps-card {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .my-steps-card::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, var(--teal-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .msc-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .msc-steps {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--teal);
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .msc-steps.loading { opacity: 0.3; }
+  .msc-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .msc-bar-wrap {
+    background: var(--bg);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .msc-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), #00e5cc);
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+  .msc-goal {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* ── TIME TABS ── */
+  .time-tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: var(--teal);
+    color: var(--bg);
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  /* ── FRIEND CARDS ── */
+  .friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .friend-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.15s;
+  }
+  .friend-card:hover { border-color: var(--border); }
+  .friend-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--teal-dim);
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--teal);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .friend-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .friend-info { flex: 1; min-width: 0; }
+  .friend-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .friend-steps-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .friend-steps {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--white);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+
+  /* ── PENDING REQUESTS ── */
+  .pending-card {
+    background: rgba(255,179,71,0.06);
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .pending-card .pending-info { flex: 1; }
+  .pending-card .pending-name { font-weight: 600; font-size: 14px; }
+  .pending-card .pending-sub { font-size: 12px; color: var(--muted); }
+  .pending-actions { display: flex; gap: 8px; }
+
+  /* ── ADD FRIEND PANEL ── */
+  .add-friend-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 24px;
+  }
+  .add-friend-panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .add-friend-row {
+    display: flex;
+    gap: 8px;
+  }
+  .add-friend-row input {
+    margin-bottom: 0;
+    flex: 1;
+  }
+  .add-friend-row .btn {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+  }
+  .empty-state .es-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state h3 {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+  .empty-state p { font-size: 14px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--teal); color: var(--teal); }
+  #toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* ── MAGIC LINK SENT ── */
+  .magic-sent {
+    text-align: center;
+    padding: 8px 0;
+  }
+  .magic-sent .big-icon { font-size: 48px; margin-bottom: 16px; }
+  .magic-sent h3 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .magic-sent p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .magic-sent .resend-link {
+    color: var(--teal);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 14px;
+    margin-top: 20px;
+    display: inline-block;
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+  }
+  .bn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 14px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 11px;
+    gap: 4px;
+    transition: color 0.15s;
+  }
+  .bn-item.active { color: var(--teal); }
+  .bn-item .bn-icon { font-size: 20px; line-height: 1; }
+  .bn-badge {
+    position: relative;
+  }
+  .bn-badge::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 5px;
+    display: none;
+  }
+  .bn-badge[data-count]:not([data-count="0"])::after { display: block; }
+
+  /* ── PANEL VIEWS ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── SETUP REMINDER ── */
+  .setup-remind {
+    background: linear-gradient(135deg, rgba(255,179,71,0.08), rgba(255,179,71,0.03));
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .setup-remind .sr-icon { font-size: 26px; flex-shrink: 0; }
+  .setup-remind .sr-text h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .setup-remind .sr-text p { font-size: 13px; color: var(--muted); }
+  .setup-remind .sr-link {
+    color: var(--amber);
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: underline;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+  }
+
+  /* ── MANUAL STEP ENTRY ── */
+  .manual-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .manual-entry h3 {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .manual-entry p { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .manual-row { display: flex; gap: 8px; }
+  .manual-row input { margin-bottom: 0; flex: 1; }
+  .manual-row .btn { width: auto; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 480px) {
+    .bridge-cards { grid-template-columns: 1fr; }
+    .msc-steps { font-size: 44px; }
+    .auth-card { padding: 24px; }
+    .time-tabs { gap: 3px; }
+    .tab-btn { font-size: 12px; padding: 8px 2px; }
+  }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-full {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .loader-full .spinner { width: 32px; height: 32px; border-width: 3px; color: var(--teal); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOADING -->
+  <div id="screen-loading" class="screen active">
+    <div class="loader-full">
+      <div class="spinner"></div>
+      Loading…
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div id="screen-auth" class="screen">
+    <div class="auth-box">
+      <div class="auth-logo">Step<span>Mates</span></div>
+      <p class="auth-tagline">Walk more. Compete with friends.</p>
+      <div class="auth-card" id="auth-card">
+        <h2>Welcome</h2>
+        <p>Enter your email to sign in or create an account — no password needed.</p>
+        <label for="auth-email">Email address</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+        <div class="error-msg" id="auth-error" style="display:none"></div>
+        <button class="btn btn-primary" id="auth-submit-btn" onclick="sendMagicLink()">
+          Continue with Email
+        </button>
+      </div>
+      <div class="auth-card" id="magic-sent-card" style="display:none">
+        <div class="magic-sent">
+          <div class="big-icon">✉️</div>
+          <h3>Check your email</h3>
+          <p>We sent a sign-in link to <strong id="magic-sent-email"></strong>.<br>Tap the link in the email to continue.</p>
+          <span class="resend-link" onclick="showAuthForm()">← Use a different email</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENDING APPROVAL -->
+  <div id="screen-pending" class="screen">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(0,201,177,0.06) 0%,transparent 60%),var(--bg)">
+      <div style="font-size:52px;margin-bottom:20px">⏳</div>
+      <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;margin-bottom:10px">Waiting for approval</h2>
+      <p style="color:var(--muted);font-size:15px;max-width:320px;line-height:1.6;margin-bottom:32px">Your account request has been sent to the administrator. You'll be able to sign in once it's approved.</p>
+      <button class="btn btn-ghost" onclick="signOut()" style="width:auto">Use a different email</button>
+    </div>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div id="screen-onboarding" class="screen">
+    <div class="onboarding-box">
+      <div class="step-indicator">
+        <div class="step-dot done" id="dot-0"></div>
+        <div class="step-dot" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+      </div>
+
+      <!-- Step 1: Display Name -->
+      <div class="onboarding-step active" id="ob-step-0">
+        <h2>What should friends call you?</h2>
+        <p class="sub">Choose a display name. This is what your friends will see.</p>
+        <label for="ob-name">Display name</label>
+        <input type="text" id="ob-name" placeholder="e.g. Alex or RunnerAlex" maxlength="30">
+        <div class="error-msg" id="ob-name-error" style="display:none"></div>
+        <button class="btn btn-primary" onclick="obNext(0)">Continue</button>
+      </div>
+
+      <!-- Step 2: Download bridge app -->
+      <div class="onboarding-step" id="ob-step-1">
+        <h2>Sync your steps automatically</h2>
+        <p class="sub">Download the free bridge app for your phone. It reads your steps from Apple Health or Android Health and sends them here.</p>
+        <div class="bridge-cards">
+          <a href="https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069" target="_blank" class="bridge-card">
+            <div class="bc-icon">🍎</div>
+            <div class="bc-name">Health Auto Export</div>
+            <div class="bc-platform">iPhone · iOS 16+</div>
+            <div class="bc-badge">Free tier</div>
+          </a>
+          <a href="https://github.com/mcnaveen/health-connect-webhook/releases" target="_blank" class="bridge-card">
+            <div class="bc-icon">🤖</div>
+            <div class="bc-name">HC Webhook</div>
+            <div class="bc-platform">Android 9+</div>
+            <div class="bc-badge">Free & open source</div>
+          </a>
+        </div>
+        <div class="info-box">
+          💡 Once installed, the app will ask for a Webhook URL — you'll get yours on the next screen.
+        </div>
+        <button class="btn btn-primary" onclick="obNext(1)">I've downloaded it</button>
+        <br><br>
+        <button class="btn btn-ghost" style="width:100%" onclick="obSkip()">Skip for now — I'll enter steps manually</button>
+      </div>
+
+      <!-- Step 3: Webhook URL -->
+      <div class="onboarding-step" id="ob-step-2">
+        <h2>Your personal sync URL</h2>
+        <p class="sub">Copy this URL and paste it into the bridge app. Your steps will sync automatically from that point on.</p>
+        <div class="webhook-box">
+          <div class="wh-label">Your Webhook URL</div>
+          <div class="webhook-url-row">
+            <div class="webhook-url" id="ob-webhook-url">Generating…</div>
+            <button class="copy-btn" id="ob-copy-btn" onclick="copyWebhook('ob-webhook-url','ob-copy-btn')">Copy</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:10px;font-weight:500">Where to paste it:</p>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.8">
+            <strong style="color:var(--white)">iPhone (Health Auto Export):</strong><br>
+            Automations → New Automation → Webhook → paste URL → select Steps → set schedule Daily<br><br>
+            <strong style="color:var(--white)">Android (HC Webhook):</strong><br>
+            Add Webhook → paste URL → enable Steps → set sync interval
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="finishOnboarding()">Go to my dashboard →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="screen-dashboard" class="screen">
+    <nav>
+      <div class="nav-logo">Step<span>Mates</span></div>
+      <div class="nav-user">
+        <span style="font-size:13px;color:var(--muted)" id="nav-name"></span>
+        <div class="avatar" id="nav-avatar" onclick="openProfileModal()" title="Edit profile">
+          <span id="nav-avatar-initial">?</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container dashboard-content">
+
+      <!-- TIME TABS -->
+      <div class="time-tabs">
+        <button class="tab-btn active" onclick="setTab('day',this)">Today</button>
+        <button class="tab-btn" onclick="setTab('week',this)">Week</button>
+        <button class="tab-btn" onclick="setTab('month',this)">Month</button>
+        <button class="tab-btn" onclick="setTab('year',this)">Year</button>
+        <button class="tab-btn" onclick="setTab('alltime',this)">All Time</button>
+      </div>
+
+      <!-- MY STEPS -->
+      <div class="my-steps-card">
+        <div class="msc-label">My Steps — <span id="tab-label">Today</span></div>
+        <div class="msc-steps" id="my-step-count">—</div>
+        <div class="msc-sub" id="my-step-sub">Loading…</div>
+        <div class="msc-bar-wrap">
+          <div class="msc-bar" id="my-step-bar"></div>
+        </div>
+        <div class="msc-goal">
+          <span>0</span>
+          <span id="goal-label">Goal: 10,000</span>
+        </div>
+      </div>
+
+      <!-- SETUP REMINDER (shown if no webhook synced yet) -->
+      <div class="setup-remind" id="setup-remind" style="display:none">
+        <div class="sr-icon">📱</div>
+        <div class="sr-text">
+          <h4>Sync your steps</h4>
+          <p>You haven't synced yet. Set up auto-sync or log manually.</p>
+        </div>
+        <button class="sr-link" onclick="showSetupPanel()">Set up →</button>
+      </div>
+
+      <!-- MANUAL ENTRY -->
+      <div class="manual-entry" id="manual-entry-panel" style="display:none">
+        <h3>Log today's steps manually</h3>
+        <p>No bridge app yet? Enter your steps from your phone's Health app.</p>
+        <div class="manual-row">
+          <input type="text" id="manual-step-input" placeholder="e.g. 8432" inputmode="numeric">
+          <button class="btn btn-primary btn-sm" onclick="logManualSteps()">Log</button>
+        </div>
+      </div>
+
+      <!-- PANEL: MY STEPS / FRIENDS -->
+      <div id="panel-home" class="panel active">
+
+        <!-- Friends' steps -->
+        <div class="section-header">
+          <div class="section-title">Friends</div>
+        </div>
+        <div id="friends-steps-list" class="friends-list">
+          <div class="loader-full" style="padding:40px 0;flex:none">
+            <div class="spinner" style="width:24px;height:24px;border-width:2px;color:var(--teal)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: FRIENDS MANAGEMENT -->
+      <div id="panel-friends" class="panel">
+        <!-- Pending received requests -->
+        <div id="pending-received-section" style="display:none">
+          <div class="section-header">
+            <div class="section-title">Friend Requests</div>
+          </div>
+          <div id="pending-received-list"></div>
+        </div>
+
+        <!-- Add friend -->
+        <div class="add-friend-panel">
+          <h3>Add a Friend</h3>
+          <div class="add-friend-row">
+            <input type="email" id="add-friend-email" placeholder="friend@email.com">
+            <button class="btn btn-primary btn-sm" onclick="sendFriendRequest()">Send Request</button>
+          </div>
+          <div class="error-msg" id="add-friend-error" style="display:none;margin-top:8px;margin-bottom:0"></div>
+        </div>
+
+        <!-- Sent requests -->
+        <div id="pending-sent-section" style="display:none">
+          <div class="section-header">
+            <div class="section-title">Sent Requests</div>
+          </div>
+          <div id="pending-sent-list" class="friends-list" style="margin-bottom:24px"></div>
+        </div>
+
+        <!-- Confirmed friends -->
+        <div class="section-header">
+          <div class="section-title">My Friends</div>
+        </div>
+        <div id="friends-manage-list" class="friends-list"></div>
+      </div>
+
+      <!-- PANEL: SETTINGS / WEBHOOK -->
+      <div id="panel-settings" class="panel">
+        <div class="section-header">
+          <div class="section-title">Sync Setup</div>
+        </div>
+
+        <div class="info-box" style="margin-bottom:20px">
+          Paste your Webhook URL into the bridge app on your phone. Steps will sync automatically.
+        </div>
+
+        <div style="margin-bottom:8px;font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Your Webhook URL</div>
+        <div class="webhook-box" style="margin-bottom:24px">
+          <div class="webhook-url-row">
+            <div class="webhook-url" id="settings-webhook-url">Loading…</div>
+            <button class="copy-btn" id="settings-copy-btn" onclick="copyWebhook('settings-webhook-url','settings-copy-btn')">Copy</button>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:28px">
+          <strong style="color:var(--white)">iPhone — Health Auto Export:</strong><br>
+          Automations → New Automation → Webhook → paste URL<br>
+          Select <em>Steps</em> → set to run Daily<br><br>
+          <strong style="color:var(--white)">Android — HC Webhook:</strong><br>
+          <a href="https://github.com/mcnaveen/health-connect-webhook/releases" target="_blank" style="color:var(--teal)">Download from GitHub</a> → Add Webhook → paste URL<br>
+          Enable Steps → set sync interval
+        </div>
+
+        <div class="section-header">
+          <div class="section-title">Bridge App Downloads</div>
+        </div>
+        <div class="bridge-cards" style="margin-bottom:32px">
+          <a href="https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069" target="_blank" class="bridge-card">
+            <div class="bc-icon">🍎</div>
+            <div class="bc-name">Health Auto Export</div>
+            <div class="bc-platform">iPhone · iOS 16+</div>
+            <div class="bc-badge">Free tier</div>
+          </a>
+          <a href="https://github.com/mcnaveen/health-connect-webhook/releases" target="_blank" class="bridge-card">
+            <div class="bc-icon">🤖</div>
+            <div class="bc-name">HC Webhook</div>
+            <div class="bc-platform">Android 9+</div>
+            <div class="bc-badge">Free & open source</div>
+          </a>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title">Account</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="avatar" style="width:48px;height:48px;font-size:18px;cursor:default" id="settings-avatar-display">
+              <span id="settings-avatar-initial">?</span>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-family:var(--font-display);font-weight:600;font-size:15px" id="settings-display-name-show">—</div>
+              <div style="font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="settings-email"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="openProfileModal()">Edit</button>
+          </div>
+        </div>
+        <button class="btn btn-ghost" style="width:100%" onclick="signOut()">Sign out</button>
+      </div>
+
+    </div><!-- /container -->
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+      <button class="bn-item active" id="bn-home" onclick="switchPanel('home')">
+        <span class="bn-icon">👟</span>Steps
+      </button>
+      <button class="bn-item" id="bn-friends" onclick="switchPanel('friends')">
+        <span class="bn-icon bn-badge" id="bn-friends-badge" data-count="0">👥</span>Friends
+      </button>
+      <button class="bn-item" id="bn-settings" onclick="switchPanel('settings')">
+        <span class="bn-icon">⚙️</span>Setup
+      </button>
+    </div>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div class="modal-overlay" id="profile-modal" onclick="closeProfileModalOutside(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h3>Edit Profile</h3>
+      <div class="modal-avatar-preview">
+        <div class="avatar-lg" id="profile-modal-avatar"><span id="profile-modal-initial">?</span></div>
+        <div>
+          <div class="avatar-preview-name" id="profile-modal-name-preview">Your Name</div>
+          <div class="avatar-preview-text">This is how friends see you</div>
+        </div>
+      </div>
+      <label for="profile-name-input">Display name</label>
+      <input type="text" id="profile-name-input" placeholder="e.g. Alex or RunnerAlex" maxlength="30">
+      <label for="profile-avatar-input">Avatar image URL <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted)">(optional — paste any image link)</span></label>
+      <input type="text" id="profile-avatar-input" placeholder="https://example.com/photo.jpg">
+      <div class="error-msg" id="profile-error" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProfile()">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- Firebase SDK -->
+<!-- Local config — copy config.example.js → config.js and fill in your values -->
+<script src="config.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, onSnapshot, Timestamp, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 🔧 CONFIGURATION
+// Copy config.example.js → config.js and fill in your values.
+// config.js is git-ignored and never committed.
+// ─────────────────────────────────────────────
+if (!window.STEPMATES_CONFIG) {
+  document.body.innerHTML = `<div style="font-family:sans-serif;padding:40px;max-width:500px;margin:0 auto;color:#f8f9fa;background:#0f1923;min-height:100vh">
+    <h2 style="color:#00C9B1;margin-bottom:16px">⚙️ Setup required</h2>
+    <p style="margin-bottom:12px">Copy <code style="background:#1e2e40;padding:2px 6px;border-radius:4px">config.example.js</code> to <code style="background:#1e2e40;padding:2px 6px;border-radius:4px">config.js</code> and fill in your Firebase credentials.</p>
+    <p style="color:#8899a6;font-size:14px">See README.md for setup instructions.</p>
+  </div>`;
+  throw new Error('STEPMATES_CONFIG not found. Did you create config.js?');
+}
+
+const FIREBASE_CONFIG = window.STEPMATES_CONFIG.firebase;
+const WEBHOOK_BASE = window.STEPMATES_CONFIG.webhookBase;
+
+const APP_URL = window.location.origin + window.location.pathname.replace(/\/$/, '');
+
+const STEP_GOAL = 10000;
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+const fbApp = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+let currentUser = null;
+let currentUserData = null;
+let currentTab = 'day';
+let friendsUnsubscribe = null;
+
+// ─────────────────────────────────────────────
+// SCREEN ROUTING
+// ─────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+window.showScreen = showScreen;
+
+// ─────────────────────────────────────────────
+// AUTH FLOW
+// ─────────────────────────────────────────────
+window.sendMagicLink = async function() {
+  const email = document.getElementById('auth-email').value.trim();
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending…';
+  try {
+    await sendSignInLinkToEmail(auth, email, {
+      url: APP_URL,
+      handleCodeInApp: true
+    });
+    localStorage.setItem('emailForSignIn', email);
+    document.getElementById('auth-card').style.display = 'none';
+    document.getElementById('magic-sent-card').style.display = 'block';
+    document.getElementById('magic-sent-email').textContent = email;
+  } catch(e) {
+    errEl.textContent = e.message || 'Failed to send link. Try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Continue with Email';
+  }
+}
+
+window.showAuthForm = function() {
+  document.getElementById('auth-card').style.display = 'block';
+  document.getElementById('magic-sent-card').style.display = 'none';
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = false;
+  btn.innerHTML = 'Continue with Email';
+}
+
+// ─────────────────────────────────────────────
+// AUTH STATE
+// ─────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    let email = localStorage.getItem('emailForSignIn');
+    if (!email) {
+      email = window.prompt('Please confirm your email:');
+    }
+    try {
+      const result = await signInWithEmailLink(auth, email, window.location.href);
+      localStorage.removeItem('emailForSignIn');
+      window.history.replaceState({}, document.title, APP_URL);
+      await initUser(result.user);
+      return;
+    } catch(e) {
+      showToast('Sign-in link expired or already used. Please try again.', 'error');
+      showScreen('auth');
+      return;
+    }
+  }
+
+  if (user) {
+    currentUser = user;
+    await initUser(user);
+  } else {
+    showScreen('auth');
+  }
+});
+
+async function initUser(user) {
+  currentUser = user;
+  const userRef = doc(db, 'users', user.uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) {
+    const webhookToken = generateToken();
+    await setDoc(userRef, {
+      email: user.email,
+      displayName: '',
+      avatarUrl: '',
+      webhookToken,
+      stepsByDate: {},
+      createdAt: serverTimestamp(),
+      setupComplete: false,
+      approved: false
+    });
+    await setDoc(doc(db, 'profiles', user.uid), {
+      displayName: '',
+      avatarUrl: '',
+      stepsByDate: {}
+    });
+    currentUserData = { email: user.email, displayName: '', avatarUrl: '', webhookToken, stepsByDate: {}, setupComplete: false, approved: false };
+    await notifyAdminOfNewUser(user.email, user.uid);
+    showScreen('pending');
+  } else {
+    currentUserData = snap.data();
+    if (currentUserData.approved === false) {
+      showScreen('pending');
+    } else if (!currentUserData.setupComplete) {
+      showScreen('onboarding');
+      document.getElementById('ob-webhook-url').textContent = buildWebhookUrl(currentUserData.webhookToken);
+    } else {
+      loadDashboard();
+    }
+  }
+}
+
+async function notifyAdminOfNewUser(email, uid) {
+  try {
+    await fetch(`${window.STEPMATES_CONFIG.adminNotifyUrl}?uid=${uid}&email=${encodeURIComponent(email)}&secret=${window.STEPMATES_CONFIG.adminSecret}`);
+  } catch(e) {
+    console.warn('Admin notify failed', e);
+  }
+}
+
+function buildWebhookUrl(token) {
+  return `${WEBHOOK_BASE}?token=${token}`;
+}
+
+function generateToken() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─────────────────────────────────────────────
+// ONBOARDING
+// ─────────────────────────────────────────────
+let obStepIndex = 0;
+
+window.obNext = async function(from) {
+  if (from === 0) {
+    const name = document.getElementById('ob-name').value.trim();
+    const errEl = document.getElementById('ob-name-error');
+    if (!name || name.length < 2) {
+      errEl.textContent = 'Please enter at least 2 characters.';
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    await updateDoc(doc(db, 'users', currentUser.uid), { displayName: name });
+    currentUserData.displayName = name;
+  }
+  goToObStep(from + 1);
+}
+
+window.obSkip = function() {
+  goToObStep(2);
+}
+
+function goToObStep(idx) {
+  document.getElementById('ob-step-' + obStepIndex).classList.remove('active');
+  document.getElementById('dot-' + obStepIndex).classList.add('done');
+  obStepIndex = idx;
+  const next = document.getElementById('ob-step-' + idx);
+  if (next) next.classList.add('active');
+  if (idx < 3) document.getElementById('dot-' + idx)?.classList.add('done');
+}
+
+window.finishOnboarding = async function() {
+  await updateDoc(doc(db, 'users', currentUser.uid), { setupComplete: true });
+  currentUserData.setupComplete = true;
+  loadDashboard();
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────
+function loadDashboard() {
+  showScreen('dashboard');
+  refreshProfileUI();
+  document.getElementById('settings-email').textContent = currentUser.email;
+  document.getElementById('settings-webhook-url').textContent = buildWebhookUrl(currentUserData.webhookToken);
+  renderMySteps();
+  loadFriends();
+  checkSetupReminder();
+}
+
+function refreshProfileUI() {
+  const name = currentUserData.displayName || currentUser.email.split('@')[0];
+  const initial = name[0].toUpperCase();
+  const avatarUrl = currentUserData.avatarUrl || '';
+
+  document.getElementById('nav-name').textContent = name;
+  setAvatarEl(document.getElementById('nav-avatar'), 'nav-avatar-initial', initial, avatarUrl, 36);
+  setAvatarEl(document.getElementById('settings-avatar-display'), 'settings-avatar-initial', initial, avatarUrl, 48);
+  document.getElementById('settings-display-name-show').textContent = name;
+}
+
+function setAvatarEl(wrapEl, initialId, initial, url, size) {
+  if (url) {
+    wrapEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
+  } else {
+    wrapEl.innerHTML = `<span id="${initialId}">${initial}</span>`;
+  }
+}
+
+function checkSetupReminder() {
+  const steps = currentUserData.stepsByDate || {};
+  const hasAnySteps = Object.keys(steps).length > 0;
+  document.getElementById('setup-remind').style.display = hasAnySteps ? 'none' : 'flex';
+  document.getElementById('manual-entry-panel').style.display = hasAnySteps ? 'none' : 'block';
+}
+
+window.showSetupPanel = function() {
+  switchPanel('settings');
+}
+
+// ─────────────────────────────────────────────
+// TABS & STEP DISPLAY
+// ─────────────────────────────────────────────
+const TAB_LABELS = { day: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', alltime: 'All Time' };
+const GOALS = { day: 10000, week: 70000, month: 300000, year: 3650000, alltime: null };
+
+window.setTab = function(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-label').textContent = TAB_LABELS[tab];
+  renderMySteps();
+  renderFriendSteps();
+}
+
+function getStepsForPeriod(stepsByDate, period) {
+  const today = new Date();
+  const keys = Object.keys(stepsByDate || {});
+  let total = 0;
+  for (const k of keys) {
+    const d = new Date(k);
+    if (period === 'day') {
+      if (isSameDay(d, today)) total += stepsByDate[k];
+    } else if (period === 'week') {
+      if (isSameWeek(d, today)) total += stepsByDate[k];
+    } else if (period === 'month') {
+      if (d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) total += stepsByDate[k];
+    } else if (period === 'year') {
+      if (d.getFullYear() === today.getFullYear()) total += stepsByDate[k];
+    } else {
+      total += stepsByDate[k];
+    }
+  }
+  return total;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function isSameWeek(d, today) {
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay());
+  start.setHours(0,0,0,0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return d >= start && d < end;
+}
+
+function renderMySteps() {
+  const steps = getStepsForPeriod(currentUserData.stepsByDate, currentTab);
+  document.getElementById('my-step-count').textContent = steps.toLocaleString();
+  const goal = GOALS[currentTab];
+  if (goal) {
+    const pct = Math.min(100, Math.round((steps / goal) * 100));
+    document.getElementById('my-step-bar').style.width = pct + '%';
+    document.getElementById('my-step-sub').textContent = pct + '% of goal';
+    document.getElementById('goal-label').textContent = 'Goal: ' + goal.toLocaleString();
+  } else {
+    document.getElementById('my-step-bar').style.width = '100%';
+    document.getElementById('my-step-sub').textContent = 'All time total';
+    document.getElementById('goal-label').textContent = '';
+  }
+}
+
+// ─────────────────────────────────────────────
+// MANUAL STEP LOG
+// ─────────────────────────────────────────────
+window.logManualSteps = async function() {
+  const val = parseInt(document.getElementById('manual-step-input').value.replace(/\D/g,''));
+  if (!val || val < 1) { showToast('Enter a valid step count', 'error'); return; }
+  const today = todayKey();
+  const steps = { ...(currentUserData.stepsByDate || {}) };
+  steps[today] = val;
+  await updateDoc(doc(db, 'users', currentUser.uid), { stepsByDate: steps });
+  await updateDoc(doc(db, 'profiles', currentUser.uid), { stepsByDate: steps });
+  currentUserData.stepsByDate = steps;
+  document.getElementById('manual-step-input').value = '';
+  renderMySteps();
+  checkSetupReminder();
+  showToast('Steps logged ✓', 'success');
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ─────────────────────────────────────────────
+// FRIENDS SYSTEM
+// ─────────────────────────────────────────────
+let friendsList = [];
+let pendingReceived = [];
+let pendingSent = [];
+
+async function loadFriends() {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+
+  const frRef = collection(db, 'friendRequests');
+  const q1 = query(frRef, where('toUid', '==', uid));
+  const q2 = query(frRef, where('fromUid', '==', uid));
+
+  const [receivedSnap, sentSnap] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+  pendingReceived = receivedSnap.docs
+    .filter(d => d.data().status === 'pending')
+    .map(d => ({ id: d.id, ...d.data() }));
+
+  pendingSent = sentSnap.docs
+    .filter(d => d.data().status === 'pending')
+    .map(d => ({ id: d.id, ...d.data() }));
+
+  const confirmedFromMe = sentSnap.docs
+    .filter(d => d.data().status === 'accepted')
+    .map(d => d.data().toUid);
+
+  const confirmedToMe = receivedSnap.docs
+    .filter(d => d.data().status === 'accepted')
+    .map(d => d.data().fromUid);
+
+  const allFriendUids = [...new Set([...confirmedFromMe, ...confirmedToMe])];
+
+  friendsList = [];
+  for (const fuid of allFriendUids) {
+    const snap = await getDoc(doc(db, 'profiles', fuid));
+    if (snap.exists()) friendsList.push({ uid: fuid, ...snap.data() });
+  }
+
+  renderFriendSteps();
+  renderFriendsPanel();
+  updateBadge();
+}
+
+function avatarHtml(f, size=44) {
+  const name = f.displayName || f.email || '?';
+  const initial = name[0].toUpperCase();
+  const url = f.avatarUrl || '';
+  if (url) {
+    return `<div class="friend-avatar" style="width:${size}px;height:${size}px"><img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'"></div>`;
+  }
+  return `<div class="friend-avatar" style="width:${size}px;height:${size}px">${initial}</div>`;
+}
+
+function renderFriendSteps() {
+  const el = document.getElementById('friends-steps-list');
+  if (friendsList.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">👣</div><h3>No friends yet</h3><p>Add friends using their email to see their steps here.</p></div>`;
+    return;
+  }
+  const sorted = [...friendsList].sort((a,b) => getStepsForPeriod(b.stepsByDate, currentTab) - getStepsForPeriod(a.stepsByDate, currentTab));
+  el.innerHTML = sorted.map(f => {
+    const steps = getStepsForPeriod(f.stepsByDate, currentTab);
+    return `
+      <div class="friend-card">
+        ${avatarHtml(f)}
+        <div class="friend-info">
+          <div class="friend-name">${esc(f.displayName || f.email)}</div>
+          <div class="friend-steps-sub">${TAB_LABELS[currentTab]}</div>
+        </div>
+        <div class="friend-steps">${steps.toLocaleString()}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderFriendsPanel() {
+  const prSection = document.getElementById('pending-received-section');
+  const prList = document.getElementById('pending-received-list');
+  if (pendingReceived.length > 0) {
+    prSection.style.display = 'block';
+    prList.innerHTML = pendingReceived.map(req => `
+      <div class="pending-card">
+        <div class="pending-info">
+          <div class="pending-name">${esc(req.fromName || req.fromEmail)}</div>
+          <div class="pending-sub">wants to be your StepMate</div>
+        </div>
+        <div class="pending-actions">
+          <button class="btn btn-primary btn-sm" onclick="respondRequest('${req.id}','accepted')">Accept</button>
+          <button class="btn btn-ghost btn-sm" onclick="respondRequest('${req.id}','denied')">Decline</button>
+        </div>
+      </div>`).join('');
+  } else {
+    prSection.style.display = 'none';
+  }
+
+  const psSection = document.getElementById('pending-sent-section');
+  const psList = document.getElementById('pending-sent-list');
+  if (pendingSent.length > 0) {
+    psSection.style.display = 'block';
+    psList.innerHTML = pendingSent.map(req => `
+      <div class="friend-card" style="opacity:0.7">
+        <div class="friend-avatar" style="border-color:var(--amber);color:var(--amber)">${(req.toEmail||'?')[0].toUpperCase()}</div>
+        <div class="friend-info">
+          <div class="friend-name">${esc(req.toEmail)}</div>
+          <div class="friend-steps-sub">Request pending…</div>
+        </div>
+      </div>`).join('');
+  } else {
+    psSection.style.display = 'none';
+  }
+
+  const fml = document.getElementById('friends-manage-list');
+  if (friendsList.length === 0) {
+    fml.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="es-icon">🤝</div><h3>No friends yet</h3><p>Send a request above to add your first StepMate.</p></div>`;
+  } else {
+    fml.innerHTML = friendsList.map(f => {
+      const steps = getStepsForPeriod(f.stepsByDate, currentTab);
+      return `
+        <div class="friend-card">
+          ${avatarHtml(f)}
+          <div class="friend-info">
+            <div class="friend-name">${esc(f.displayName || f.email)}</div>
+            <div class="friend-steps-sub">${steps.toLocaleString()} steps today</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function updateBadge() {
+  const badge = document.getElementById('bn-friends-badge');
+  badge.setAttribute('data-count', pendingReceived.length);
+}
+
+window.sendFriendRequest = async function() {
+  const emailInput = document.getElementById('add-friend-email');
+  const errEl = document.getElementById('add-friend-error');
+  const email = emailInput.value.trim().toLowerCase();
+  errEl.style.display = 'none';
+
+  if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    errEl.textContent = 'Please enter a valid email.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (email === currentUser.email.toLowerCase()) {
+    errEl.textContent = "That's your own email!";
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const usersQ = query(collection(db, 'users'), where('email', '==', email));
+  const snap = await getDocs(usersQ);
+  if (snap.empty) {
+    errEl.textContent = 'No StepMates account found for that email.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const toUser = snap.docs[0];
+  const toUid = toUser.id;
+  const toData = toUser.data();
+
+  const existingQ = query(collection(db, 'friendRequests'),
+    where('fromUid', '==', currentUser.uid),
+    where('toUid', '==', toUid)
+  );
+  const existingSnap = await getDocs(existingQ);
+  if (!existingSnap.empty) {
+    errEl.textContent = 'You already sent a request to this person.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  await addDoc(collection(db, 'friendRequests'), {
+    fromUid: currentUser.uid,
+    fromEmail: currentUser.email,
+    fromName: currentUserData.displayName || currentUser.email,
+    toUid,
+    toEmail: email,
+    status: 'pending',
+    createdAt: serverTimestamp()
+  });
+
+  emailInput.value = '';
+  showToast('Friend request sent!', 'success');
+  await loadFriends();
+}
+
+window.respondRequest = async function(requestId, status) {
+  await updateDoc(doc(db, 'friendRequests', requestId), { status });
+  showToast(status === 'accepted' ? 'Friend added! 🎉' : 'Request declined', status === 'accepted' ? 'success' : '');
+  await loadFriends();
+}
+
+// ─────────────────────────────────────────────
+// PANEL SWITCHING
+// ─────────────────────────────────────────────
+window.switchPanel = function(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('bn-' + name).classList.add('active');
+  if (name === 'friends') loadFriends();
+}
+
+// ─────────────────────────────────────────────
+// COPY WEBHOOK
+// ─────────────────────────────────────────────
+window.copyWebhook = function(urlElId, btnId) {
+  const url = document.getElementById(urlElId).textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById(btnId);
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─────────────────────────────────────────────
+// PROFILE MODAL
+// ─────────────────────────────────────────────
+window.openProfileModal = function() {
+  const modal = document.getElementById('profile-modal');
+  document.getElementById('profile-name-input').value = currentUserData.displayName || '';
+  document.getElementById('profile-avatar-input').value = currentUserData.avatarUrl || '';
+  document.getElementById('profile-error').style.display = 'none';
+  updateProfilePreview();
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('profile-name-input').focus(), 300);
+}
+
+window.closeProfileModal = function() {
+  document.getElementById('profile-modal').classList.remove('open');
+}
+
+window.closeProfileModalOutside = function(e) {
+  if (e.target === document.getElementById('profile-modal')) closeProfileModal();
+}
+
+function updateProfilePreview() {
+  const name = document.getElementById('profile-name-input').value.trim() || 'Your Name';
+  const url = document.getElementById('profile-avatar-input').value.trim();
+  const initial = name[0].toUpperCase();
+  document.getElementById('profile-modal-name-preview').textContent = name;
+  const avatarEl = document.getElementById('profile-modal-avatar');
+  if (url) {
+    avatarEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
+  } else {
+    avatarEl.innerHTML = `<span id="profile-modal-initial">${initial}</span>`;
+  }
+}
+
+window.saveProfile = async function() {
+  const name = document.getElementById('profile-name-input').value.trim();
+  const avatarUrl = document.getElementById('profile-avatar-input').value.trim();
+  const errEl = document.getElementById('profile-error');
+  errEl.style.display = 'none';
+
+  if (!name || name.length < 2) {
+    errEl.textContent = 'Display name must be at least 2 characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (avatarUrl && !avatarUrl.startsWith('http')) {
+    errEl.textContent = 'Avatar URL must start with http:// or https://';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.querySelector('#profile-modal .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid), { displayName: name, avatarUrl });
+    await updateDoc(doc(db, 'profiles', currentUser.uid), { displayName: name, avatarUrl });
+    currentUserData.displayName = name;
+    currentUserData.avatarUrl = avatarUrl;
+    refreshProfileUI();
+    renderFriendSteps();
+    renderFriendsPanel();
+    closeProfileModal();
+    showToast('Profile updated ✓', 'success');
+  } catch(e) {
+    errEl.textContent = 'Failed to save. Please try again.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Save changes';
+  }
+}
+
+// ─────────────────────────────────────────────
+// SIGN OUT
+// ─────────────────────────────────────────────
+window.signOut = async function() {
+  if (!confirm('Sign out?')) return;
+  await fbSignOut(auth);
+  currentUser = null;
+  currentUserData = null;
+  showScreen('auth');
+  showAuthForm();
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+window.showToast = function(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Allow Enter key on auth email input
+document.getElementById('auth-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMagicLink();
+});
+
+document.getElementById('profile-name-input').addEventListener('input', updateProfilePreview);
+document.getElementById('profile-avatar-input').addEventListener('input', updateProfilePreview);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeProfileModal();
+});
+</script>
+</body>
+</html>
