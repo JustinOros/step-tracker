@@ -864,7 +864,24 @@
     .tab-btn { font-size: 12px; padding: 8px 2px; }
   }
 
-  /* ── SPINNER ── */
+  /* ── PULL TO REFRESH ── */
+  .ptr-indicator {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-48px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--teal);
+    z-index: 200;
+    transition: transform 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .ptr-indicator.visible { transform: translateX(-50%) translateY(12px); }
   .spinner {
     display: inline-block;
     width: 18px;
@@ -1218,6 +1235,8 @@
 
 </div><!-- /app -->
 
+<div id="ptr-indicator" class="ptr-indicator">↓ Refreshing…</div>
+
 <div id="toast"></div>
 
 <!-- Firebase SDK -->
@@ -1567,49 +1586,79 @@ function todayKey() {
 }
 
 // ─────────────────────────────────────────────
-// FRIENDS SYSTEM
+// FRIENDS SYSTEM — REAL-TIME LISTENERS
 // ─────────────────────────────────────────────
 let friendsList = [];
 let pendingReceived = [];
 let pendingSent = [];
+let friendUnsubscribers = [];
 
-async function loadFriends() {
+function teardownListeners() {
+  friendUnsubscribers.forEach(fn => fn());
+  friendUnsubscribers = [];
+}
+
+function loadFriends() {
   if (!currentUser) return;
+  teardownListeners();
   const uid = currentUser.uid;
-
   const frRef = collection(db, 'friendRequests');
-  const q1 = query(frRef, where('toUid', '==', uid));
-  const q2 = query(frRef, where('fromUid', '==', uid));
 
-  const [receivedSnap, sentSnap] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  const unsubOwn = onSnapshot(doc(db, 'users', uid), snap => {
+    if (!snap.exists()) return;
+    currentUserData = { ...currentUserData, ...snap.data() };
+    renderMySteps();
+    checkSetupReminder();
+  });
+  friendUnsubscribers.push(unsubOwn);
 
-  pendingReceived = receivedSnap.docs
-    .filter(d => d.data().status === 'pending')
-    .map(d => ({ id: d.id, ...d.data() }));
+  const unsubReceived = onSnapshot(query(frRef, where('toUid', '==', uid)), async receivedSnap => {
+    const unsubSent = onSnapshot(query(frRef, where('fromUid', '==', uid)), async sentSnap => {
+      pendingReceived = receivedSnap.docs
+        .filter(d => d.data().status === 'pending')
+        .map(d => ({ id: d.id, ...d.data() }));
 
-  pendingSent = sentSnap.docs
-    .filter(d => d.data().status === 'pending')
-    .map(d => ({ id: d.id, ...d.data() }));
+      pendingSent = sentSnap.docs
+        .filter(d => d.data().status === 'pending')
+        .map(d => ({ id: d.id, ...d.data() }));
 
-  const confirmedFromMe = sentSnap.docs
-    .filter(d => d.data().status === 'accepted')
-    .map(d => d.data().toUid);
+      const confirmedFromMe = sentSnap.docs
+        .filter(d => d.data().status === 'accepted')
+        .map(d => d.data().toUid);
 
-  const confirmedToMe = receivedSnap.docs
-    .filter(d => d.data().status === 'accepted')
-    .map(d => d.data().fromUid);
+      const confirmedToMe = receivedSnap.docs
+        .filter(d => d.data().status === 'accepted')
+        .map(d => d.data().fromUid);
 
-  const allFriendUids = [...new Set([...confirmedFromMe, ...confirmedToMe])];
+      const allFriendUids = [...new Set([...confirmedFromMe, ...confirmedToMe])];
 
-  friendsList = [];
-  for (const fuid of allFriendUids) {
-    const snap = await getDoc(doc(db, 'profiles', fuid));
-    if (snap.exists()) friendsList.push({ uid: fuid, ...snap.data() });
-  }
+      friendUnsubscribers.filter(fn => fn._isFriendProfile).forEach(fn => fn());
+      friendUnsubscribers = friendUnsubscribers.filter(fn => !fn._isFriendProfile);
 
-  renderFriendSteps();
-  renderFriendsPanel();
-  updateBadge();
+      friendsList = [];
+      for (const fuid of allFriendUids) {
+        const unsubProfile = onSnapshot(doc(db, 'profiles', fuid), profileSnap => {
+          if (!profileSnap.exists()) return;
+          const idx = friendsList.findIndex(f => f.uid === fuid);
+          const data = { uid: fuid, ...profileSnap.data() };
+          if (idx >= 0) {
+            friendsList[idx] = data;
+          } else {
+            friendsList.push(data);
+          }
+          renderFriendSteps();
+          renderFriendsPanel();
+        });
+        unsubProfile._isFriendProfile = true;
+        friendUnsubscribers.push(unsubProfile);
+      }
+
+      renderFriendsPanel();
+      updateBadge();
+    });
+    friendUnsubscribers.push(unsubSent);
+  });
+  friendUnsubscribers.push(unsubReceived);
 }
 
 function avatarHtml(f, size=44) {
@@ -1867,9 +1916,11 @@ window.saveProfile = async function() {
 // ─────────────────────────────────────────────
 window.signOut = async function() {
   if (!confirm('Sign out?')) return;
+  teardownListeners();
   await fbSignOut(auth);
   currentUser = null;
   currentUserData = null;
+  friendsList = [];
   showScreen('auth');
   showAuthForm();
 }
@@ -1904,6 +1955,34 @@ document.getElementById('profile-avatar-input').addEventListener('input', update
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeProfileModal();
 });
+
+let ptrStartY = 0;
+let ptrTriggered = false;
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) ptrStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!ptrStartY) return;
+  const delta = e.touches[0].clientY - ptrStartY;
+  if (delta > 80 && !ptrTriggered && document.getElementById('screen-dashboard').classList.contains('active')) {
+    ptrTriggered = true;
+    const ind = document.getElementById('ptr-indicator');
+    ind.classList.add('visible');
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', () => {
+  if (ptrTriggered) {
+    teardownListeners();
+    loadFriends();
+    setTimeout(() => {
+      document.getElementById('ptr-indicator').classList.remove('visible');
+    }, 1000);
+  }
+  ptrStartY = 0;
+  ptrTriggered = false;
+}, { passive: true });
 </script>
 </body>
 </html>
