@@ -1676,7 +1676,7 @@ async function initUser(user) {
 
 async function notifyAdminOfNewUser(email, uid) {
   try {
-    await fetch(`${window.STEPMATES_CONFIG.adminNotifyUrl}?uid=${uid}&email=${encodeURIComponent(email)}&secret=${window.STEPMATES_CONFIG.adminSecret}`);
+    await fetch(`${window.STEPMATES_CONFIG.adminNotifyUrl}?uid=${uid}&email=${encodeURIComponent(email)}`);
   } catch(e) {
     console.warn('Admin notify failed', e);
   }

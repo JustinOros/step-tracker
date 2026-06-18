@@ -8,7 +8,6 @@ window.STEPMATES_CONFIG = {
     appId: "1:334532615980:web:84cd9b35341dda869fd689"
   },
   webhookBase: "https://webhook-mgc3i5pbxq-uc.a.run.app",
-  adminNotifyUrl: "https://us-central1-step-tracker-bfd5c.cloudfunctions.net/adminNotify",
-  adminSecret: "YOUR_ADMIN_SECRET",
+  adminNotifyUrl: "https://adminnotify-mgc3i5pbxq-uc.a.run.app",
   appUrl: "https://justinoros.github.io/step-tracker"
 };
