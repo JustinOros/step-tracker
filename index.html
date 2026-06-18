@@ -1174,7 +1174,7 @@
         </div>
         <div class="msc-goal">
           <span>0</span>
-          <span id="goal-label">Goal: 10,000</span>
+          <span id="goal-label" onclick="openGoalModal()" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted">Goal: 5,000</span>
         </div>
       </div>
 
@@ -1337,6 +1337,37 @@
       </div>
     </div>
   </div>
+  <!-- GOAL MODAL -->
+  <div class="modal-overlay" id="goal-modal" onclick="closeGoalModalOutside(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h3>Daily Step Goal</h3>
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-family:var(--font-display);font-size:52px;font-weight:700;color:var(--teal);letter-spacing:-2px;line-height:1" id="goal-modal-display">5,000</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px">steps per day</div>
+      </div>
+      <div style="padding:0 4px;margin-bottom:24px">
+        <input type="range" id="goal-slider"
+          min="1000" max="100000" step="1000" value="5000"
+          style="width:100%;accent-color:var(--teal);height:6px;cursor:pointer">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
+          <span>1,000</span>
+          <span>100,000</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="setGoalPreset(5000)">5K</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="setGoalPreset(7500)">7.5K</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="setGoalPreset(10000)">10K</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="setGoalPreset(15000)">15K</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="setGoalPreset(20000)">20K</button>
+      </div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="btn btn-ghost" onclick="closeGoalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveGoal()">Save goal</button>
+      </div>
+    </div>
+  </div>
 
 </div><!-- /app -->
 
@@ -1372,7 +1403,7 @@ const WEBHOOK_BASE = window.STEPMATES_CONFIG.webhookBase;
 
 const APP_URL = window.location.origin + window.location.pathname.replace(/\/$/, '');
 
-const STEP_GOAL = 10000;
+const STEP_GOAL = 5000;
 
 // ─────────────────────────────────────────────
 // INIT
@@ -1634,7 +1665,14 @@ window.showSetupPanel = function() {
 // TABS & STEP DISPLAY
 // ─────────────────────────────────────────────
 const TAB_LABELS = { day: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', alltime: 'All Time' };
-const GOALS = { day: 10000, week: 70000, month: 300000, year: 3650000, alltime: null };
+function getDailyGoal() {
+  return currentUserData.dailyGoal || 5000;
+}
+
+function getGoals() {
+  const d = getDailyGoal();
+  return { day: d, week: d * 7, month: d * 30, year: d * 365, alltime: null };
+}
 
 window.setTab = function(tab, el) {
   currentTab = tab;
@@ -1683,6 +1721,7 @@ function isSameWeek(d, today) {
 function renderMySteps() {
   const steps = getStepsForPeriod(currentUserData.stepsByDate, currentTab);
   document.getElementById('my-step-count').textContent = steps.toLocaleString();
+  const GOALS = getGoals();
   const goal = GOALS[currentTab];
   if (goal) {
     const pct = Math.min(100, Math.round((steps / goal) * 100));
@@ -1984,6 +2023,42 @@ window.copyWebhook = function(urlElId, btnId) {
 }
 
 // ─────────────────────────────────────────────
+// GOAL MODAL
+// ─────────────────────────────────────────────
+window.openGoalModal = function() {
+  const current = getDailyGoal();
+  document.getElementById('goal-slider').value = current;
+  document.getElementById('goal-modal-display').textContent = current.toLocaleString();
+  document.getElementById('goal-modal').classList.add('open');
+}
+
+window.closeGoalModal = function() {
+  document.getElementById('goal-modal').classList.remove('open');
+}
+
+window.closeGoalModalOutside = function(e) {
+  if (e.target === document.getElementById('goal-modal')) closeGoalModal();
+}
+
+window.setGoalPreset = function(val) {
+  document.getElementById('goal-slider').value = val;
+  document.getElementById('goal-modal-display').textContent = val.toLocaleString();
+}
+
+window.saveGoal = async function() {
+  const val = parseInt(document.getElementById('goal-slider').value);
+  await updateDoc(doc(db, 'users', currentUser.uid), { dailyGoal: val });
+  currentUserData.dailyGoal = val;
+  renderMySteps();
+  closeGoalModal();
+  showToast('Goal updated ✓', 'success');
+}
+
+document.getElementById('goal-slider').addEventListener('input', function() {
+  document.getElementById('goal-modal-display').textContent = parseInt(this.value).toLocaleString();
+});
+
+// ─────────────────────────────────────────────
 // PROFILE MODAL
 // ─────────────────────────────────────────────
 window.openProfileModal = function() {
@@ -2104,7 +2179,7 @@ document.getElementById('profile-name-input').addEventListener('input', updatePr
 document.getElementById('profile-avatar-input').addEventListener('input', updateProfilePreview);
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeProfileModal(); closeMenu(); }
+  if (e.key === 'Escape') { closeProfileModal(); closeGoalModal(); closeMenu(); }
 });
 
 let ptrStartY = 0;
