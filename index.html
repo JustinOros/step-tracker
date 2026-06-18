@@ -1805,10 +1805,15 @@ function loadFriends() {
 
       friendsList = [];
       for (const fuid of allFriendUids) {
+        const req = [...sentSnap.docs, ...receivedSnap.docs].find(d =>
+          (d.data().fromUid === currentUser.uid && d.data().toUid === fuid) ||
+          (d.data().toUid === currentUser.uid && d.data().fromUid === fuid)
+        );
+        const addedAt = req?.data()?.createdAt?.toMillis?.() || 0;
         const unsubProfile = onSnapshot(doc(db, 'profiles', fuid), profileSnap => {
           if (!profileSnap.exists()) return;
           const idx = friendsList.findIndex(f => f.uid === fuid);
-          const data = { uid: fuid, ...profileSnap.data() };
+          const data = { uid: fuid, addedAt, ...profileSnap.data() };
           if (idx >= 0) {
             friendsList[idx] = data;
           } else {
@@ -1900,7 +1905,8 @@ function renderFriendsPanel() {
   if (friendsList.length === 0) {
     fml.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="es-icon">🤝</div><h3>No friends yet</h3><p>Send a request above to add your first StepMate.</p></div>`;
   } else {
-    fml.innerHTML = friendsList.map(f => {
+    const sortedByAdded = [...friendsList].sort((a,b) => (b.addedAt || 0) - (a.addedAt || 0));
+    fml.innerHTML = sortedByAdded.map(f => {
       const steps = getStepsForPeriod(f.stepsByDate, currentTab);
       return `
         <div class="friend-card">
@@ -1909,6 +1915,7 @@ function renderFriendsPanel() {
             <div class="friend-name">${esc(f.displayName || f.email)}</div>
             <div class="friend-steps-sub">${steps.toLocaleString()} steps today</div>
           </div>
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);flex-shrink:0" onclick="removeFriend('${f.uid}','${esc(f.displayName || f.email)}')">Remove</button>
         </div>`;
     }).join('');
   }
@@ -1927,8 +1934,10 @@ function updateBadge() {
 window.sendFriendRequest = async function() {
   const emailInput = document.getElementById('add-friend-email');
   const errEl = document.getElementById('add-friend-error');
+  const btn = document.querySelector('#panel-friends .add-friend-row .btn');
   const email = emailInput.value.trim().toLowerCase();
   errEl.style.display = 'none';
+  errEl.style.color = '';
 
   if (!email || !/\S+@\S+\.\S+/.test(email)) {
     errEl.textContent = 'Please enter a valid email.';
@@ -1941,17 +1950,21 @@ window.sendFriendRequest = async function() {
     return;
   }
 
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
   const usersQ = query(collection(db, 'users'), where('email', '==', email));
   const snap = await getDocs(usersQ);
   if (snap.empty) {
     errEl.textContent = 'No StepMates account found for that email.';
     errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Send Request';
     return;
   }
 
   const toUser = snap.docs[0];
   const toUid = toUser.id;
-  const toData = toUser.data();
 
   const existingQ = query(collection(db, 'friendRequests'),
     where('fromUid', '==', currentUser.uid),
@@ -1961,6 +1974,8 @@ window.sendFriendRequest = async function() {
   if (!existingSnap.empty) {
     errEl.textContent = 'You already sent a request to this person.';
     errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Send Request';
     return;
   }
 
@@ -1975,13 +1990,31 @@ window.sendFriendRequest = async function() {
   });
 
   emailInput.value = '';
-  showToast('Friend request sent!', 'success');
+  btn.disabled = false;
+  btn.innerHTML = 'Send Request';
+  errEl.textContent = '✓ Friend request sent!';
+  errEl.style.color = 'var(--success)';
+  errEl.style.display = 'block';
+  setTimeout(() => { errEl.style.display = 'none'; }, 4000);
   await loadFriends();
 }
 
 window.respondRequest = async function(requestId, status) {
   await updateDoc(doc(db, 'friendRequests', requestId), { status });
   showToast(status === 'accepted' ? 'Friend added! 🎉' : 'Request declined', status === 'accepted' ? 'success' : '');
+  await loadFriends();
+}
+
+window.removeFriend = async function(friendUid, friendName) {
+  if (!confirm(`Remove ${friendName} from your friends?`)) return;
+  const uid = currentUser.uid;
+  const frRef = collection(db, 'friendRequests');
+  const q1 = query(frRef, where('fromUid', '==', uid), where('toUid', '==', friendUid));
+  const q2 = query(frRef, where('fromUid', '==', friendUid), where('toUid', '==', uid));
+  const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  const deletes = [...s1.docs, ...s2.docs].map(d => updateDoc(doc(db, 'friendRequests', d.id), { status: 'removed' }));
+  await Promise.all(deletes);
+  showToast(`${friendName} removed`, '');
   await loadFriends();
 }
 
