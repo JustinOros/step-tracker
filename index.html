@@ -1607,7 +1607,8 @@ function getStepsForPeriod(stepsByDate, period) {
   const keys = Object.keys(stepsByDate || {});
   let total = 0;
   for (const k of keys) {
-    const d = new Date(k);
+    const parts = k.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     if (period === 'day') {
       if (isSameDay(d, today)) total += stepsByDate[k];
     } else if (period === 'week') {
