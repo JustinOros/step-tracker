@@ -940,6 +940,8 @@ function loadFriendsRealtime() {
   const myFriendsRef = collection(db, 'friends', currentUser.uid, 'list');
   const unsubFriends = onSnapshot(myFriendsRef, async (snap) => {
     friendsData = {};
+    friendProfiles = {};
+    friendSteps = {};
     snap.forEach(d => { friendsData[d.id] = d.data(); });
     const approvedUids = Object.entries(friendsData)
       .filter(([uid, data]) => data.approved === true && data.enabled === true)
