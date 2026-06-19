@@ -1555,11 +1555,9 @@ window.sendMagicLink = async function() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Sending…';
   try {
-    const continueUrl = APP_URL + '?email=' + encodeURIComponent(email);
-    await sendSignInLinkToEmail(auth, email, {
-      url: continueUrl,
-      handleCodeInApp: true
-    });
+    const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send');
     localStorage.setItem('emailForSignIn', email);
     document.getElementById('auth-card').style.display = 'none';
     document.getElementById('magic-sent-card').style.display = 'block';
