@@ -974,6 +974,7 @@ function getPendingFriendUids() {
 }
 
 async function loadFriendProfilesAndSteps(uids) {
+  console.log('loadFriendProfilesAndSteps uids:', uids);
   for (const uid of uids) {
     if (!friendProfiles[uid]) {
       const pSnap = await getDoc(doc(db, 'profiles', uid));
@@ -983,10 +984,18 @@ async function loadFriendProfilesAndSteps(uids) {
       const sSnap = await getDoc(doc(db, 'steps', uid));
       friendSteps[uid] = sSnap.exists() ? sSnap.data().stepsByDate || {} : {};
     }
-    const theirRef = doc(db, 'friends', uid, 'list', currentUser.uid);
-    const theirSnap = await getDoc(theirRef);
-    mutualApproved[uid] = theirSnap.exists() && theirSnap.data().approved === true && theirSnap.data().enabled !== false;
+    try {
+      const theirRef = doc(db, 'friends', uid, 'list', currentUser.uid);
+      const theirSnap = await getDoc(theirRef);
+      console.log('their entry exists:', theirSnap.exists(), 'data:', JSON.stringify(theirSnap.data()));
+      mutualApproved[uid] = theirSnap.exists() && theirSnap.data().approved === true && theirSnap.data().enabled !== false;
+    } catch(e) {
+      console.error('mutualApproved check failed for', uid, e);
+      mutualApproved[uid] = false;
+    }
+    console.log('mutualApproved[uid]:', uid, mutualApproved[uid]);
   }
+  console.log('final mutualApproved:', JSON.stringify(mutualApproved));
 }
 
 // LEADERBOARD
