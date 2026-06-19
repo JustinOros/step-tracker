@@ -446,7 +446,7 @@
         <!-- Leaderboard -->
         <div class="section-header">
           <div class="section-title">Leaderboard</div>
-          <button class="btn btn-primary btn-sm" onclick="openInviteModal()" style="width:auto;gap:6px"><span style="font-size:18px;line-height:1">+</span> Invite</button>
+          <button class="btn btn-primary btn-sm" onclick="openInviteModal()" style="width:auto;gap:6px"><span style="font-size:18px;line-height:1">+</span> Add Friend</button>
         </div>
         <div id="leaderboard-list"></div>
         <div id="lb-show-more" style="display:none;text-align:center;margin-top:16px">
@@ -561,17 +561,18 @@
 </div><!-- /app -->
 
 <!-- MODALS -->
-<!-- INVITE -->
+<!-- FRIEND REQUEST -->
 <div class="modal-overlay" id="invite-modal" onclick="closeInviteModalOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>Invite a Friend</h3>
-    <p style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">Share this message. When your friend taps the link they'll be taken straight to StepMates.</p>
-    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.7;margin-bottom:20px;color:var(--white)" id="invite-message-preview"></div>
-    <div class="modal-actions" style="gap:8px">
-      <button class="btn btn-ghost" onclick="closeInviteModal()" style="flex:1;min-width:80px">Cancel</button>
-      <button class="btn btn-ghost" onclick="copyInviteLink()" id="copy-invite-btn" style="flex:1;min-width:100px">Copy Link</button>
-      <button class="btn btn-primary" onclick="shareInvite()" style="flex:2;min-width:120px">Share Invite</button>
+    <h3>Add a Friend</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">Enter your friend's email address. They'll receive an email with a sign-in link and your friend request.</p>
+    <label for="invite-email-input">Friend's email address</label>
+    <input type="email" id="invite-email-input" placeholder="friend@example.com" autocomplete="off">
+    <div class="error-msg" id="invite-email-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeInviteModal()">Cancel</button>
+      <button class="btn btn-primary" id="invite-send-btn" onclick="sendFriendRequestByEmail()">Send Request</button>
     </div>
   </div>
 </div>
@@ -660,14 +661,6 @@ const FIREBASE_CONFIG = window.STEPMATES_CONFIG.firebase;
 const WEBHOOK_BASE = window.STEPMATES_CONFIG.webhookBase;
 const APP_URL = window.location.origin + window.location.pathname.replace(/\/$/, '');
 
-const _initialParams = new URLSearchParams(window.location.search);
-const _savedInviteToken = _initialParams.get('invite');
-const _savedFromUid = _initialParams.get('from');
-if (_savedInviteToken && _savedFromUid) {
-  localStorage.setItem('pendingInviteToken', _savedInviteToken);
-  localStorage.setItem('pendingInviteFrom', _savedFromUid);
-}
-
 const fbApp = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
@@ -683,6 +676,7 @@ let friendSteps = {};
 let lbVisibleCount = 10;
 let friendsVisibleCount = 10;
 let currentFriendUid = null;
+let mutualApproved = {};
 let unsubscribers = [];
 
 const TAB_LABELS = { day: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', alltime: 'All Time' };
@@ -796,8 +790,6 @@ async function initUser(user) {
   const snap = await getDoc(userRef);
 
   if (!snap.exists()) {
-    const inviteToken = _savedInviteToken || localStorage.getItem('pendingInviteToken');
-    const inviteFrom = _savedFromUid || localStorage.getItem('pendingInviteFrom');
     const webhookToken = generateToken();
     await setDoc(userRef, {
       email: user.email,
@@ -806,14 +798,8 @@ async function initUser(user) {
       dailyGoal: 5000,
       createdAt: serverTimestamp()
     });
-    await setDoc(doc(db, 'profiles', user.uid), {
-      displayName: '',
-      avatarUrl: ''
-    });
+    await setDoc(doc(db, 'profiles', user.uid), { displayName: '', avatarUrl: '' });
     await setDoc(doc(db, 'steps', user.uid), { stepsByDate: {} });
-    if (inviteToken && inviteFrom) {
-      localStorage.setItem('pendingInviteEmail', user.email);
-    }
     currentUserData = { email: user.email, webhookToken, approved: false, dailyGoal: 5000 };
     await notifyAdminOfNewUser(user.email, user.uid);
     showScreen('pending');
@@ -834,7 +820,8 @@ async function initUser(user) {
       const stepsSnap = await getDoc(doc(db, 'steps', user.uid));
       currentStepsData = stepsSnap.exists() ? stepsSnap.data().stepsByDate || {} : {};
       loadDashboard();
-      await handleInviteLink();
+      const pendingCount = getPendingFriendUids().length;
+      if (pendingCount > 0) switchPanel('friends');
     }
   }
 }
@@ -871,11 +858,10 @@ window.finishOnboarding = async function() {
   await updateDoc(doc(db, 'users', currentUser.uid), { setupComplete: true });
   currentUserData.setupComplete = true;
   loadDashboard();
-  await handleInviteLink();
 }
 
 // DASHBOARD
-function teardown() { unsubscribers.forEach(fn => fn()); unsubscribers = []; }
+function teardown() { unsubscribers.forEach(fn => fn()); unsubscribers = []; mutualApproved = {}; }
 
 function loadDashboard() {
   showScreen('dashboard');
@@ -973,7 +959,7 @@ function loadFriendsRealtime() {
 
 function getMutualFriendUids() {
   return Object.entries(friendsData)
-    .filter(([uid, data]) => data.approved === true && data.enabled === true)
+    .filter(([uid, data]) => data.approved === true && data.enabled === true && mutualApproved[uid] === true)
     .map(([uid]) => uid);
 }
 
@@ -993,6 +979,9 @@ async function loadFriendProfilesAndSteps(uids) {
       const sSnap = await getDoc(doc(db, 'steps', uid));
       friendSteps[uid] = sSnap.exists() ? sSnap.data().stepsByDate || {} : {};
     }
+    const theirRef = doc(db, 'friends', uid, 'list', currentUser.uid);
+    const theirSnap = await getDoc(theirRef);
+    mutualApproved[uid] = theirSnap.exists() && theirSnap.data().approved === true && theirSnap.data().enabled !== false;
   }
 }
 
@@ -1233,76 +1222,51 @@ window.saveNickname = async function() {
   showToast(val ? 'Nickname saved ✓' : 'Nickname cleared', 'success');
 }
 
-// INVITE
-window.openInviteModal = async function() {
-  const token = generateToken().substring(0,12);
-  const inviteUrl = `${APP_URL}?invite=${token}&from=${currentUser.uid}`;
-  await setDoc(doc(db, 'invites', token), {
-    fromUid: currentUser.uid,
-    fromName: currentProfileData?.displayName || 'Someone',
-    createdAt: serverTimestamp(),
-    expiresAt: new Date(Date.now() + 72*60*60*1000)
-  });
-  const name = currentProfileData?.displayName || 'Someone';
-  const msg = `${name} has invited you to join them on StepMates — a free step tracker that syncs steps from your phone and lets you compete with friends.\n\nTap the link to get started:\n${inviteUrl}`;
-  document.getElementById('invite-message-preview').textContent = msg;
-  document.getElementById('invite-modal').dataset.url = inviteUrl;
-  document.getElementById('invite-modal').dataset.msg = msg;
+// FRIEND REQUEST BY EMAIL
+window.openInviteModal = function() {
+  document.getElementById('invite-email-input').value = '';
+  document.getElementById('invite-email-error').style.display = 'none';
+  document.getElementById('invite-send-btn').disabled = false;
+  document.getElementById('invite-send-btn').innerHTML = 'Send Request';
   document.getElementById('invite-modal').classList.add('open');
+  setTimeout(() => document.getElementById('invite-email-input').focus(), 300);
 }
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('open'); }
 window.closeInviteModalOutside = function(e) { if (e.target===document.getElementById('invite-modal')) closeInviteModal(); }
-window.copyInviteLink = function() {
-  const url = document.getElementById('invite-modal').dataset.url;
-  navigator.clipboard.writeText(url);
-  const btn = document.getElementById('copy-invite-btn');
-  btn.textContent = '✓ Copied!'; btn.style.color = 'var(--success)'; btn.style.borderColor = 'var(--success)';
-  setTimeout(() => { btn.textContent = 'Copy Link'; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
-}
-window.shareInvite = function() {
-  const msg = document.getElementById('invite-modal').dataset.msg;
-  if (navigator.share) navigator.share({ text: msg });
-  else { navigator.clipboard.writeText(msg); showToast('Invite copied to clipboard ✓', 'success'); }
-  closeInviteModal();
-}
 
-// HANDLE INVITE LINK
-async function handleInviteLink() {
-  const inviteToken = _savedInviteToken || localStorage.getItem('pendingInviteToken');
-  const fromUid = _savedFromUid || localStorage.getItem('pendingInviteFrom');
-  const inviteEmail = localStorage.getItem('pendingInviteEmail');
-  console.log('handleInviteLink:', { inviteToken, fromUid, inviteEmail, currentEmail: currentUser?.email });
-  if (!inviteToken || !fromUid || fromUid === currentUser?.uid) {
-    localStorage.removeItem('pendingInviteToken');
-    localStorage.removeItem('pendingInviteFrom');
-    localStorage.removeItem('pendingInviteEmail');
+window.sendFriendRequestByEmail = async function() {
+  const email = document.getElementById('invite-email-input').value.trim().toLowerCase();
+  const errEl = document.getElementById('invite-email-error');
+  const btn = document.getElementById('invite-send-btn');
+  errEl.style.display = 'none';
+
+  if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
     return;
   }
-  if (inviteEmail && inviteEmail.toLowerCase() !== currentUser.email.toLowerCase()) return;
-  localStorage.removeItem('pendingInviteToken');
-  localStorage.removeItem('pendingInviteFrom');
-  localStorage.removeItem('pendingInviteEmail');
+  if (email === currentUser.email.toLowerCase()) {
+    errEl.textContent = "That's your own email!";
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
   try {
-    const inviteSnap = await getDoc(doc(db, 'invites', inviteToken));
-    if (!inviteSnap.exists()) { showToast('Invite link not found.', 'error'); return; }
-    const invite = inviteSnap.data();
-    if (invite.expiresAt.toDate() < new Date()) { showToast('This invite link has expired.', 'error'); return; }
-
-    const myUid = currentUser.uid;
-    const senderUid = fromUid;
-
-    const senderFriendRef = doc(db, 'friends', senderUid, 'list', myUid);
-    await setDoc(senderFriendRef, { approved: true, enabled: true, addedAt: serverTimestamp(), nickname: '' }, { merge: true });
-
-    const myFriendRef = doc(db, 'friends', myUid, 'list', senderUid);
-    const existingSnap = await getDoc(myFriendRef);
-    if (!existingSnap.exists()) {
-      await setDoc(myFriendRef, { approved: false, enabled: true, addedAt: serverTimestamp(), nickname: '' });
-    }
-
-    showToast(`Friend request from ${invite.fromName}! Check your Friends tab. 🎉`, 'success');
-    loadFriendsRealtime();
-  } catch(e) { console.error('Invite error:', e); }
+    const idToken = await currentUser.getIdToken();
+    const res = await fetch(`${window.STEPMATES_CONFIG.friendRequestUrl}?fromUid=${currentUser.uid}&fromName=${encodeURIComponent(currentProfileData?.displayName || 'Someone')}&toEmail=${encodeURIComponent(email)}&idToken=${idToken}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send');
+    closeInviteModal();
+    showToast('Friend request sent! ✓', 'success');
+  } catch(e) {
+    errEl.textContent = e.message || 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Send Request';
+  }
 }
 
 // SEND MAGIC LINK
@@ -1313,14 +1277,6 @@ window.sendMagicLink = async function() {
   if (!email || !/\S+@\S+\.\S+/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; return; }
   const btn = document.getElementById('auth-submit-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending…';
-
-  const inviteToken = _savedInviteToken || localStorage.getItem('pendingInviteToken');
-  const inviteFrom = _savedFromUid || localStorage.getItem('pendingInviteFrom');
-  if (inviteToken && inviteFrom) {
-    localStorage.setItem('pendingInviteToken', inviteToken);
-    localStorage.setItem('pendingInviteFrom', inviteFrom);
-    localStorage.setItem('pendingInviteEmail', email);
-  }
 
   try {
     const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}`);

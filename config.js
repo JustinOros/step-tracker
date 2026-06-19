@@ -10,5 +10,6 @@ window.STEPMATES_CONFIG = {
   webhookBase: "https://webhook-mgc3i5pbxq-uc.a.run.app",
   adminNotifyUrl: "https://adminnotify-mgc3i5pbxq-uc.a.run.app",
   sendMagicLinkUrl: "https://sendmagiclink-mgc3i5pbxq-uc.a.run.app",
+  friendRequestUrl: "https://friendrequest-mgc3i5pbxq-uc.a.run.app",
   appUrl: "https://justinoros.github.io/step-tracker"
 };
