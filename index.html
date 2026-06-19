@@ -1372,9 +1372,10 @@
       <h3>Invite a Friend</h3>
       <p style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">Share this message with a friend. When they tap the link they'll be taken straight to StepMates.</p>
       <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;line-height:1.7;margin-bottom:20px;color:var(--white)" id="invite-message-preview"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeInviteModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="shareInvite()">Share Invite</button>
+      <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+        <button class="btn btn-ghost" onclick="closeInviteModal()" style="flex:1;min-width:80px">Cancel</button>
+        <button class="btn btn-ghost" onclick="copyInviteLink()" id="copy-invite-btn" style="flex:1;min-width:100px">Copy Link</button>
+        <button class="btn btn-primary" onclick="shareInvite()" style="flex:2;min-width:120px">Share Invite</button>
       </div>
     </div>
   </div>
@@ -1521,6 +1522,11 @@ const _initialParams = new URLSearchParams(window.location.search);
 const _savedInviteToken = _initialParams.get('invite');
 const _savedFromUid = _initialParams.get('from');
 
+if (_savedInviteToken && _savedFromUid) {
+  localStorage.setItem('pendingInviteToken', _savedInviteToken);
+  localStorage.setItem('pendingInviteFrom', _savedFromUid);
+}
+
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
@@ -1559,8 +1565,15 @@ window.sendMagicLink = async function() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Sending…';
   try {
-    const currentUrl = window.location.href.split('?')[0] + window.location.search;
-    const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}&continueUrl=${encodeURIComponent(currentUrl)}`);
+    const currentPageParams = new URLSearchParams(window.location.search);
+    const inviteToken = currentPageParams.get('invite') || localStorage.getItem('pendingInviteToken');
+    const inviteFrom = currentPageParams.get('from') || localStorage.getItem('pendingInviteFrom');
+    if (inviteToken && inviteFrom) {
+      localStorage.setItem('pendingInviteToken', inviteToken);
+      localStorage.setItem('pendingInviteFrom', inviteFrom);
+      localStorage.setItem('pendingInviteEmail', email);
+    }
+    const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to send');
     localStorage.setItem('emailForSignIn', email);
@@ -2255,6 +2268,20 @@ window.closeInviteModalOutside = function(e) {
   if (e.target === document.getElementById('invite-modal')) closeInviteModal();
 }
 
+window.copyInviteLink = function() {
+  const url = document.getElementById('invite-modal').dataset.url;
+  navigator.clipboard.writeText(url);
+  const btn = document.getElementById('copy-invite-btn');
+  btn.textContent = '✓ Copied!';
+  btn.style.color = 'var(--success)';
+  btn.style.borderColor = 'var(--success)';
+  setTimeout(() => {
+    btn.textContent = 'Copy Link';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 2000);
+}
+
 window.shareInvite = function() {
   const msg = document.getElementById('invite-modal').dataset.msg;
   if (navigator.share) {
@@ -2418,9 +2445,21 @@ window.saveProfile = async function() {
 // INVITE LINK HANDLER
 // ─────────────────────────────────────────────
 async function handleInviteLink() {
-  const inviteToken = _savedInviteToken;
-  const fromUid = _savedFromUid;
-  if (!inviteToken || !fromUid || fromUid === currentUser.uid) return;
+  const inviteToken = _savedInviteToken || localStorage.getItem('pendingInviteToken');
+  const fromUid = _savedFromUid || localStorage.getItem('pendingInviteFrom');
+  const inviteEmail = localStorage.getItem('pendingInviteEmail');
+  if (!inviteToken || !fromUid || fromUid === currentUser.uid) {
+    localStorage.removeItem('pendingInviteToken');
+    localStorage.removeItem('pendingInviteFrom');
+    localStorage.removeItem('pendingInviteEmail');
+    return;
+  }
+  if (inviteEmail && inviteEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+    return;
+  }
+  localStorage.removeItem('pendingInviteToken');
+  localStorage.removeItem('pendingInviteFrom');
+  localStorage.removeItem('pendingInviteEmail');
   try {
     const inviteRef = doc(db, 'invites', inviteToken);
     const inviteSnap = await getDoc(inviteRef);
