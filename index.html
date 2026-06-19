@@ -1559,7 +1559,8 @@ window.sendMagicLink = async function() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Sending…';
   try {
-    const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}`);
+    const currentUrl = window.location.href.split('?')[0] + window.location.search;
+    const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}&continueUrl=${encodeURIComponent(currentUrl)}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to send');
     localStorage.setItem('emailForSignIn', email);
