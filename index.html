@@ -863,6 +863,8 @@ window.finishOnboarding = async function() {
 // DASHBOARD
 function teardown() { unsubscribers.forEach(fn => fn()); unsubscribers = []; mutualApproved = {}; }
 
+window._debug = { get friendsData() { return friendsData; }, get mutualApproved() { return mutualApproved; }, get friendProfiles() { return friendProfiles; } };
+
 function loadDashboard() {
   showScreen('dashboard');
   refreshProfileUI();
