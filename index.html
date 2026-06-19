@@ -1517,6 +1517,10 @@ const APP_URL = window.location.origin + window.location.pathname.replace(/\/$/,
 
 const STEP_GOAL = 5000;
 
+const _initialParams = new URLSearchParams(window.location.search);
+const _savedInviteToken = _initialParams.get('invite');
+const _savedFromUid = _initialParams.get('from');
+
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
@@ -1563,7 +1567,9 @@ window.sendMagicLink = async function() {
     document.getElementById('magic-sent-card').style.display = 'block';
     document.getElementById('magic-sent-email').textContent = email;
   } catch(e) {
-    errEl.textContent = e.message || 'Failed to send link. Try again.';
+    errEl.textContent = e.message.includes('429') || e.message.includes('Too many')
+      ? 'Too many requests — please wait a few minutes and try again.'
+      : (e.message || 'Failed to send link. Try again.');
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.innerHTML = 'Continue with Email';
@@ -2411,11 +2417,9 @@ window.saveProfile = async function() {
 // INVITE LINK HANDLER
 // ─────────────────────────────────────────────
 async function handleInviteLink() {
-  const params = new URLSearchParams(window.location.search);
-  const inviteToken = params.get('invite');
-  const fromUid = params.get('from');
+  const inviteToken = _savedInviteToken;
+  const fromUid = _savedFromUid;
   if (!inviteToken || !fromUid || fromUid === currentUser.uid) return;
-  window.history.replaceState({}, document.title, APP_URL);
   try {
     const inviteRef = doc(db, 'invites', inviteToken);
     const inviteSnap = await getDoc(inviteRef);
