@@ -2448,18 +2448,22 @@ async function handleInviteLink() {
   const inviteToken = _savedInviteToken || localStorage.getItem('pendingInviteToken');
   const fromUid = _savedFromUid || localStorage.getItem('pendingInviteFrom');
   const inviteEmail = localStorage.getItem('pendingInviteEmail');
+  console.log('handleInviteLink:', { inviteToken, fromUid, inviteEmail, currentEmail: currentUser.email });
   if (!inviteToken || !fromUid || fromUid === currentUser.uid) {
+    console.log('handleInviteLink: skipping - no token/fromUid or same user');
     localStorage.removeItem('pendingInviteToken');
     localStorage.removeItem('pendingInviteFrom');
     localStorage.removeItem('pendingInviteEmail');
     return;
   }
   if (inviteEmail && inviteEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+    console.log('handleInviteLink: skipping - email mismatch', inviteEmail, currentUser.email);
     return;
   }
   localStorage.removeItem('pendingInviteToken');
   localStorage.removeItem('pendingInviteFrom');
   localStorage.removeItem('pendingInviteEmail');
+  console.log('handleInviteLink: processing invite', inviteToken, 'from', fromUid);
   try {
     const inviteRef = doc(db, 'invites', inviteToken);
     const inviteSnap = await getDoc(inviteRef);
