@@ -676,7 +676,6 @@ let friendSteps = {};
 let lbVisibleCount = 10;
 let friendsVisibleCount = 10;
 let currentFriendUid = null;
-let mutualApproved = {};
 let unsubscribers = [];
 
 const TAB_LABELS = { day: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', alltime: 'All Time' };
@@ -861,9 +860,9 @@ window.finishOnboarding = async function() {
 }
 
 // DASHBOARD
-function teardown() { unsubscribers.forEach(fn => fn()); unsubscribers = []; mutualApproved = {}; }
+function teardown() { unsubscribers.forEach(fn => fn()); unsubscribers = []; }
 
-window._debug = { get friendsData() { return friendsData; }, get mutualApproved() { return mutualApproved; }, get friendProfiles() { return friendProfiles; } };
+window._debug = { get friendsData() { return friendsData; }, get friendProfiles() { return friendProfiles; } };
 
 function loadDashboard() {
   showScreen('dashboard');
@@ -963,7 +962,7 @@ function loadFriendsRealtime() {
 
 function getMutualFriendUids() {
   return Object.entries(friendsData)
-    .filter(([uid, data]) => data.approved === true && data.enabled === true && mutualApproved[uid] === true)
+    .filter(([uid, data]) => data.approved === true && data.enabled === true)
     .map(([uid]) => uid);
 }
 
@@ -974,7 +973,6 @@ function getPendingFriendUids() {
 }
 
 async function loadFriendProfilesAndSteps(uids) {
-  console.log('loadFriendProfilesAndSteps uids:', uids);
   for (const uid of uids) {
     if (!friendProfiles[uid]) {
       const pSnap = await getDoc(doc(db, 'profiles', uid));
@@ -984,18 +982,7 @@ async function loadFriendProfilesAndSteps(uids) {
       const sSnap = await getDoc(doc(db, 'steps', uid));
       friendSteps[uid] = sSnap.exists() ? sSnap.data().stepsByDate || {} : {};
     }
-    try {
-      const theirRef = doc(db, 'friends', uid, 'list', currentUser.uid);
-      const theirSnap = await getDoc(theirRef);
-      console.log('their entry exists:', theirSnap.exists(), 'data:', JSON.stringify(theirSnap.data()));
-      mutualApproved[uid] = theirSnap.exists() && theirSnap.data().approved === true && theirSnap.data().enabled !== false;
-    } catch(e) {
-      console.error('mutualApproved check failed for', uid, e);
-      mutualApproved[uid] = false;
-    }
-    console.log('mutualApproved[uid]:', uid, mutualApproved[uid]);
   }
-  console.log('final mutualApproved:', JSON.stringify(mutualApproved));
 }
 
 // LEADERBOARD
@@ -1152,7 +1139,8 @@ window.bulkRemoveFriends = async function() {
 }
 
 async function doRemoveFriend(friendUid) {
-  await updateDoc(doc(db, 'friends', currentUser.uid, 'list', friendUid), { enabled: false });
+  const idToken = await currentUser.getIdToken();
+  await fetch(`${window.STEPMATES_CONFIG.friendRequestUrl}?action=remove&fromUid=${currentUser.uid}&toUid=${friendUid}&idToken=${idToken}`);
   delete friendProfiles[friendUid];
   delete friendSteps[friendUid];
 }
