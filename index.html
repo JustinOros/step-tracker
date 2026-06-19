@@ -1323,19 +1323,6 @@ window.sendMagicLink = async function() {
   }
 
   try {
-    const usersQ = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-    const usersSnap = await getDocs(usersQ);
-    const isExisting = !usersSnap.empty;
-
-    if (!isExisting && inviteToken && inviteFrom) {
-      document.getElementById('auth-card').style.display = 'none';
-      document.getElementById('magic-sent-card').style.display = 'block';
-      document.getElementById('magic-sent-email').textContent = email;
-      btn.disabled = false; btn.innerHTML = 'Continue with Email';
-      await notifyAdminOfNewUser(email, 'pending-' + email);
-      return;
-    }
-
     const res = await fetch(`${window.STEPMATES_CONFIG.sendMagicLinkUrl}?email=${encodeURIComponent(email)}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to send');
