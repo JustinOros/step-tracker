@@ -942,8 +942,10 @@ function loadFriendsRealtime() {
   const unsubFriends = onSnapshot(myFriendsRef, async (snap) => {
     friendsData = {};
     snap.forEach(d => { friendsData[d.id] = d.data(); });
-    const mutualUids = getMutualFriendUids();
-    await loadFriendProfilesAndSteps(mutualUids);
+    const approvedUids = Object.entries(friendsData)
+      .filter(([uid, data]) => data.approved === true && data.enabled === true)
+      .map(([uid]) => uid);
+    await loadFriendProfilesAndSteps(approvedUids);
     renderLeaderboard();
     renderManageFriends();
     updateBadge();
