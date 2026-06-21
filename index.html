@@ -728,8 +728,8 @@ onAuthStateChanged(auth, async (user) => {
       await initUser(result.user);
       return;
     } catch(e) {
-      showToast('Sign-in link expired or already used. Please try again.', 'error');
       showScreen('auth');
+      window.history.replaceState({}, document.title, APP_URL);
       return;
     }
   }
