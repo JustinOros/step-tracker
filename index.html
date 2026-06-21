@@ -976,14 +976,13 @@ function renderLeaderboard() {
     return;
   }
 
-  const visible = entries.slice(0, lbVisibleCount);
   el.innerHTML = visible.map((e, i) => {
     const rank = i + 1;
     const rankClass = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
     const name = e.isMe ? (currentProfileData?.displayName || 'Me') : getFriendDisplayName(e.uid);
     const avatar = avatarHtml(e.profile, 40);
     return `
-      <div class="lb-row${e.isMe?' is-me':''}" onclick="${e.isMe ? '' : `openFriendProfile('${e.uid}')`}" style="${e.isMe?'cursor:default':''}">
+      <div class="lb-row${e.isMe?' is-me':''}" ${e.isMe ? '' : `data-uid="${e.uid}"`} style="${e.isMe?'cursor:default':''}">
         <div class="lb-rank ${rankClass}">${rank}</div>
         ${avatar}
         <div class="lb-info">
@@ -993,6 +992,10 @@ function renderLeaderboard() {
         <div class="lb-steps" style="${e.isMe?'color:var(--teal)':''}">${e.steps.toLocaleString()}</div>
       </div>`;
   }).join('');
+
+  el.querySelectorAll('.lb-row[data-uid]').forEach(row => {
+    row.addEventListener('click', () => openFriendProfile(row.dataset.uid));
+  });
 
   document.getElementById('lb-show-more').style.display = entries.length > lbVisibleCount ? 'block' : 'none';
 }
