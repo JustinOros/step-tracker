@@ -908,6 +908,7 @@ window.logManualSteps = async function() {
 // FRIENDS REALTIME
 function loadFriendsRealtime() {
   teardown();
+  let firstLoad = true;
   const myFriendsRef = collection(db, 'friends', currentUser.uid, 'list');
   const unsubFriends = onSnapshot(myFriendsRef, async (snap) => {
     friendsData = {};
@@ -931,6 +932,10 @@ function loadFriendsRealtime() {
     renderPendingRequests();
     renderManageFriends();
     updateBadge();
+    if (firstLoad) {
+      firstLoad = false;
+      if (approvedUids.length > 0) switchPanel('friends');
+    }
   });
   unsubscribers.push(unsubFriends);
 
