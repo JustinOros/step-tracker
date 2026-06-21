@@ -42,7 +42,7 @@ A private step tracking web app that syncs steps from your phone and lets you co
 
 ### Android
 1. Download the **StepMates Sync** Android app:
-   [Download StepMates-Sync-Android.apk](https://github.com/JustinOros/step-tracker/releases/download/v1.1/StepMates-Sync-Android.apk)
+   [Download StepMates-Sync-Android.apk](https://github.com/JustinOros/stepmates-sync/releases/download/v1.1/StepMates-Sync-Android.apk)
 2. Install it (allow unknown sources when prompted)
 3. Sign in to StepMates in your browser → hamburger menu → **Setup & Sync** → copy your Webhook URL
 4. Open the StepMates Sync app → paste your Webhook URL → tap **Sync My Steps**
