@@ -457,20 +457,9 @@
         <div style="margin-top:28px">
           <div class="section-header">
             <div class="section-title">Manage Friends</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="btn btn-danger btn-sm" id="bulk-remove-btn" onclick="bulkRemoveFriends()" style="display:none;width:auto">Remove Selected</button>
-            </div>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px">
             <input type="text" id="friends-search" placeholder="Search friends…" style="margin-bottom:0;flex:1" oninput="renderManageFriends()">
-            <select id="friends-sort" onchange="renderManageFriends()">
-              <option value="date">Date Added</option>
-              <option value="name">Name</option>
-            </select>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:0 2px">
-            <input type="checkbox" id="select-all-friends" onchange="toggleSelectAll(this.checked)" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;margin-bottom:0">
-            <label for="select-all-friends" style="font-size:13px;color:var(--muted);cursor:pointer;user-select:none;text-transform:none;letter-spacing:0">Select all</label>
           </div>
           <div id="friends-manage-list"></div>
           <div id="friends-show-more" style="display:none;text-align:center;margin-top:8px">
@@ -1054,7 +1043,6 @@ function renderManageFriends() {
   }
 
   const search = (document.getElementById('friends-search')?.value || '').toLowerCase();
-  const sortBy = document.getElementById('friends-sort')?.value || 'date';
   const mutualUids = getMutualFriendUids();
 
   let filtered = mutualUids.filter(uid => {
@@ -1063,8 +1051,7 @@ function renderManageFriends() {
     return !search || name.includes(search) || display.includes(search);
   });
 
-  if (sortBy === 'name') filtered.sort((a,b) => getFriendDisplayName(a).localeCompare(getFriendDisplayName(b)));
-  else filtered.sort((a,b) => (friendsData[b]?.addedAt?.toMillis?.() || 0) - (friendsData[a]?.addedAt?.toMillis?.() || 0));
+  filtered.sort((a,b) => (friendsData[b]?.addedAt?.toMillis?.() || 0) - (friendsData[a]?.addedAt?.toMillis?.() || 0));
 
   const fml = document.getElementById('friends-manage-list');
   if (filtered.length === 0) {
@@ -1081,7 +1068,6 @@ function renderManageFriends() {
     const dateStr = addedAt ? addedAt.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '—';
     return `
       <div class="friend-row" id="fr-${uid}">
-        <input type="checkbox" id="chk-${uid}" onclick="onFriendCheck(event,'${uid}')">
         <span class="fr-date">${dateStr}</span>
         ${avatarHtml(friendProfiles[uid]||{}, 36)}
         <div class="fr-info" onclick="openFriendProfile('${uid}')">
@@ -1143,8 +1129,11 @@ window.bulkRemoveFriends = async function() {
 async function doRemoveFriend(friendUid) {
   const idToken = await currentUser.getIdToken();
   await fetch(`${window.STEPMATES_CONFIG.friendRequestUrl}?action=remove&fromUid=${currentUser.uid}&toUid=${friendUid}&idToken=${idToken}`);
+  if (friendsData[friendUid]) friendsData[friendUid].enabled = false;
   delete friendProfiles[friendUid];
   delete friendSteps[friendUid];
+  renderLeaderboard();
+  renderManageFriends();
 }
 
 window.approveFriend = async function(uid) {
