@@ -917,7 +917,16 @@ function loadFriendsRealtime() {
     const approvedUids = Object.entries(friendsData)
       .filter(([uid, data]) => data.approved === true && data.enabled === true)
       .map(([uid]) => uid);
+    const pendingUids = Object.entries(friendsData)
+      .filter(([uid, data]) => data.approved === false && data.enabled !== false)
+      .map(([uid]) => uid);
     await loadFriendProfilesAndSteps(approvedUids);
+    for (const uid of pendingUids) {
+      if (!friendProfiles[uid]) {
+        const pSnap = await getDoc(doc(db, 'profiles', uid));
+        friendProfiles[uid] = pSnap.exists() ? pSnap.data() : {};
+      }
+    }
     renderLeaderboard();
     renderPendingRequests();
     renderManageFriends();
