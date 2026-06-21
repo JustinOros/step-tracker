@@ -929,7 +929,7 @@ function loadFriendsRealtime() {
     renderMySteps();
     checkSetupReminder();
     renderLeaderboard();
-  });
+  }, err => console.warn('Steps listener error:', err.code));
   unsubscribers.push(unsubMySteps);
 }
 
@@ -1005,6 +1005,8 @@ window.showMoreLb = function() { lbVisibleCount += 10; renderLeaderboard(); }
 
 // MANAGE FRIENDS
 function renderManageFriends() {
+  const fml = document.getElementById('friends-manage-list');
+  if (!fml) return;
   const pendingUids = getPendingFriendUids();
   const prSection = document.getElementById('pending-received-section');
   const prList = document.getElementById('pending-received-list');
@@ -1135,6 +1137,7 @@ window.denyFriend = async function(uid) {
 
 // FRIEND PROFILE
 window.openFriendProfile = async function(uid) {
+  if (!uid) return;
   currentFriendUid = uid;
   const profile = friendProfiles[uid] || {};
   const nick = friendsData[uid]?.nickname || '';
@@ -1146,10 +1149,8 @@ window.openFriendProfile = async function(uid) {
 
   document.getElementById('fp-name-text').textContent = nick || displayName;
 
-  const userSnap = await getDoc(doc(db, 'users', uid));
-  const userData = userSnap.exists() ? userSnap.data() : {};
-  const joined = userData.createdAt?.toDate?.();
-  document.getElementById('fp-joined').textContent = joined ? joined.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) : '—';
+  const addedAt = friendsData[uid]?.addedAt?.toDate?.();
+  document.getElementById('fp-joined').textContent = addedAt ? addedAt.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) : '—';
 
   showScreen('friend-profile');
 }
