@@ -1,241 +1,105 @@
-# Step Tracker
+# StepMates — Walk Together
 
-A mobile-friendly step tracking app for friend groups. Compare daily, weekly, and monthly steps with people you know.
+A private step tracking web app that syncs steps from your phone and lets you compete with friends on a leaderboard.
 
-Built with vanilla JavaScript, Firebase, and hosted free on GitHub Pages. No native app required — steps sync automatically from Apple Health or Android Health via a free bridge app.
-
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Firebase](https://img.shields.io/badge/backend-Firebase-orange)
-![GitHub Pages](https://img.shields.io/badge/hosting-GitHub%20Pages-green)
+**Live app:** https://justinoros.github.io/step-tracker
 
 ---
 
 ## Features
 
-- **Passwordless sign-in** — magic link sent to email, no password needed
-- **Admin approval** — new registrations require administrator approval before access is granted
-- **Auto step sync** — bridge apps on iPhone and Android POST steps automatically via webhook
-- **Manual entry** — log steps manually if preferred
-- **Friend system** — add friends by email, approve or deny requests
-- **Step comparisons** — view steps by Today, Week, Month, Year, or All Time
-- **Profiles** — display name and avatar URL per user
-- **Mobile-first** — designed for use in a mobile browser, works as a PWA
+- Passwordless email sign-in
+- Admin approval for new accounts
+- Real-time step sync from Apple Health (iPhone) or Health Connect (Android)
+- Friend leaderboard with Today / Week / Month / Year / All Time tabs
+- Friend requests by email
+- Nicknames for friends (private, only you see them)
+- Friend profile pages with average daily steps and last sync date
+- Manual step entry
+- Daily step goal with progress bar
+- Pull-to-refresh
+- Mobile-first, installs to home screen as a PWA
 
 ---
 
-## How It Works
+## How to Join
 
-```
-iPhone/Android Health App
-        ↓
-  Bridge App (free)
-        ↓
-  Webhook URL (Firebase Cloud Function)
-        ↓
-  Firestore Database
-        ↓
-  Step Tracker Web App (GitHub Pages)
-```
+1. Go to https://justinoros.github.io/step-tracker
+2. Enter your email address and click **Continue with Email**
+3. Check your email for a sign-in link
+4. Choose a display name and complete setup
+5. Wait for administrator approval — you'll receive an email with a sign-in link when approved
+
+---
+
+## Syncing Steps
+
+### iPhone
+1. Download **Health Auto Export** from the App Store (free tier works)
+2. Sign in to StepMates → hamburger menu → **Setup & Sync** → copy your Webhook URL
+3. In Health Auto Export → Automations → New Automation → Webhook → paste URL
+4. Select **Steps** → set Date Range to **Default** → set schedule to **Daily**
+
+### Android
+1. Download the **StepMates Sync** Android app from GitHub:
+   https://github.com/JustinOros/step-tracker/releases/latest
+2. Install it (allow unknown sources when prompted)
+3. Sign in to StepMates in your browser → hamburger menu → **Setup & Sync** → copy your Webhook URL
+4. Open the StepMates Sync app → paste your Webhook URL → tap **Sync My Steps**
+5. Grant Health Connect permission when prompted
+6. Your steps will sync — open the app any time to sync again
+
+> **Note:** Make sure your fitness app (Google Fit, Samsung Health, etc.) is syncing to Health Connect on your Android device.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Cost |
-|---|---|---|
-| Frontend | Vanilla JS, HTML, CSS | Free |
-| Hosting | GitHub Pages | Free |
-| Auth | Firebase Authentication (magic link) | Free |
-| Database | Firebase Firestore | Free tier |
-| Backend | Firebase Cloud Functions | Free tier |
+- **Frontend:** Vanilla HTML/CSS/JS, hosted on GitHub Pages
+- **Backend:** Firebase Firestore + Cloud Functions (Node.js)
+- **Auth:** Firebase Authentication (passwordless email link)
+- **Android companion:** Kotlin + Health Connect API
 
 ---
 
-## Setup Your Own Instance
-
-### Prerequisites
-
-- A [Firebase](https://firebase.google.com) account
-- A [GitHub](https://github.com) account
-- [Node.js](https://nodejs.org) installed (LTS version)
-
----
-
-### 1. Create a Firebase Project
-
-1. Go to [console.firebase.google.com](https://console.firebase.google.com)
-2. Click **Add project** → name it → disable Analytics → **Create project**
-
----
-
-### 2. Enable Passwordless Email Auth
-
-1. Firebase Console → **Authentication** → **Get started**
-2. Click **Email/Password** → enable **Email link (passwordless sign-in)** → Save
-3. **Settings → Authorized domains** → add `yourusername.github.io`
-
----
-
-### 3. Create Firestore Database
-
-1. Firebase Console → **Firestore Database** → **Create database**
-2. Choose **Start in test mode** → pick a region → **Done**
-3. Click the **Rules** tab and paste:
+## Project Structure
 
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /profiles/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /friendRequests/{reqId} {
-      allow read: if request.auth != null &&
-        (resource.data.fromUid == request.auth.uid ||
-         resource.data.toUid == request.auth.uid);
-      allow create: if request.auth != null &&
-        request.resource.data.fromUid == request.auth.uid;
-      allow update: if request.auth != null &&
-        resource.data.toUid == request.auth.uid;
-    }
-  }
-}
+step-tracker/
+  index.html        — Main web app
+  config.js         — Firebase config (safe to commit)
+  README.md         — This file
 ```
 
-Click **Publish**.
-
 ---
 
-### 4. Deploy Cloud Functions
+## For Developers
 
-```bash
-npm install -g firebase-tools
-firebase login
-mkdir step-tracker-fn && cd step-tracker-fn
-firebase init functions
-# Choose: JavaScript, No ESLint, Yes to install dependencies
-```
+This is a private app — new registrations require admin approval. If you want to run your own instance:
 
-Copy the contents of `functions/index.js` from this repo into your `functions/index.js`.
+1. Create a Firebase project
+2. Enable Firestore and Authentication (Email link sign-in)
+3. Copy `config.js` and fill in your Firebase credentials
+4. Deploy the Cloud Functions from the `functions/` folder
+5. Host `index.html` and `config.js` on GitHub Pages or any static host
 
-Install nodemailer:
-```bash
-cd functions && npm install nodemailer
-```
+### Firestore Collections
 
-Set your secrets (Firebase will prompt for each value):
-```bash
-firebase functions:secrets:set ADMIN_EMAIL
-firebase functions:secrets:set ADMIN_SECRET
-firebase functions:secrets:set APP_URL
-firebase functions:secrets:set GMAIL_USER
-firebase functions:secrets:set GMAIL_PASS
-```
+| Collection | Purpose |
+|---|---|
+| `users` | Email, webhook token, approval status |
+| `profiles` | Display name, avatar URL |
+| `steps` | Step data by date |
+| `friends/{uid}/list` | Friend relationships (subcollection) |
+| `pendingFriendRequests` | Pending invites for unregistered users |
+| `rates` | Rate limiting for magic link emails |
 
-> **GMAIL_PASS** must be a Gmail App Password, not your regular password.
-> Generate one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+### Cloud Functions
 
-Deploy:
-```bash
-cd .. && firebase deploy --only functions
-```
-
-Copy the function URLs shown after deployment.
-
----
-
-### 5. Configure the App
-
-Copy `config.example.js` to `config.js` and fill in your values:
-
-```javascript
-window.STEPMATES_CONFIG = {
-  firebase: {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.firebasestorage.app",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  },
-  webhookBase: "https://YOUR_WEBHOOK_URL.a.run.app",
-  adminNotifyUrl: "https://us-central1-YOUR_PROJECT.cloudfunctions.net/adminNotify",
-  adminSecret: "YOUR_ADMIN_SECRET",
-  appUrl: "https://yourusername.github.io/step-tracker"
-};
-```
-
-Get your Firebase config from: Firebase Console → gear icon → Project Settings → Your Apps → Add app → Web.
-
----
-
-### 6. Publish to GitHub Pages
-
-1. Create a GitHub repo named `step-tracker`
-2. Rename `stepmates.html` → `index.html`
-3. Upload `index.html`, `config.js`, and `.gitignore`
-4. Go to repo **Settings → Pages → Deploy from branch → main / root → Save**
-5. Your app will be live at `https://yourusername.github.io/step-tracker`
-
----
-
-## Bridge App Setup
-
-Share these instructions with your friends after they register.
-
-### iPhone — Health Auto Export
-- Download: [App Store](https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069)
-- Automations → New Automation → Webhook → paste your personal webhook URL
-- Data types: **Step Count**
-- Schedule: Daily
-
-### Android — HC Webhook
-- Download: [GitHub Releases](https://github.com/mcnaveen/health-connect-webhook/releases) (free, open source)
-- Add Webhook → paste your personal webhook URL
-- Enable **Steps** → set sync interval
-
-Each user gets their own unique webhook URL shown in the app after sign-in.
-
----
-
-## Admin Approval Flow
-
-1. New user enters email → receives magic sign-in link
-2. After clicking the link, their account is created with `approved: false`
-3. Administrator receives an email with **Approve** and **Deny** buttons
-4. User sees a "Waiting for approval" screen until approved
-5. Once approved, they proceed to onboarding
-
----
-
-## Free Tier Limits
-
-| Service | Free Allowance | Expected Usage |
-|---|---|---|
-| Firebase Auth | Unlimited | Fine |
-| Firestore reads | 50,000/day | Fine for small groups |
-| Firestore writes | 20,000/day | Fine |
-| Cloud Functions | 2M calls/month | Fine (a few calls/day) |
-| GitHub Pages | Unlimited | Fine |
-
-**Expected monthly cost: $0**
-
----
-
-## Roadmap
-
-- [ ] Step contests with start/end dates
-- [ ] Weekly recap emails
-- [ ] Streak tracking
-- [ ] Push notifications when a friend passes you
-- [ ] Leaderboard with rank change indicators
-
----
-
-## License
-
-MIT — do whatever you want with it.
+| Function | Purpose |
+|---|---|
+| `webhook` | Receives step data from bridge apps |
+| `sendMagicLink` | Sends branded sign-in email |
+| `adminNotify` | Notifies admin of new registration |
+| `approveUser` | Approves/denies user, sends approval email |
+| `friendRequest` | Sends friend request email, creates friend docs |
