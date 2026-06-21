@@ -452,20 +452,6 @@
         <div id="lb-show-more" style="display:none;text-align:center;margin-top:16px">
           <button class="btn btn-ghost" onclick="showMoreLb()" style="width:auto">Show More…</button>
         </div>
-
-        <!-- Manage friends -->
-        <div style="margin-top:28px">
-          <div class="section-header">
-            <div class="section-title">Manage Friends</div>
-          </div>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input type="text" id="friends-search" placeholder="Search friends…" style="margin-bottom:0;flex:1" oninput="renderManageFriends()">
-          </div>
-          <div id="friends-manage-list"></div>
-          <div id="friends-show-more" style="display:none;text-align:center;margin-top:8px">
-            <button class="btn btn-ghost" onclick="showMoreFriends()" style="width:auto">Show More…</button>
-          </div>
-        </div>
       </div>
 
       <!-- PANEL: SETTINGS -->
@@ -523,27 +509,23 @@
     <div class="container" style="padding-top:32px;padding-bottom:40px;max-width:480px">
       <div style="text-align:center;margin-bottom:32px">
         <div id="fp-avatar" class="avatar-lg" style="margin:0 auto 16px"></div>
-        <div onclick="openNicknameModal()" style="font-family:var(--font-display);font-size:26px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">
-          <span id="fp-name-text">—</span>
-          <span style="font-size:14px;color:var(--teal);font-weight:500">✏️</span>
-        </div>
-        <div id="fp-nickname-shown" style="font-size:13px;color:var(--muted);margin-top:2px;display:none"></div>
       </div>
+
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
-        <div style="display:flex;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-          <span style="color:var(--muted);font-size:14px">Joined StepMates</span>
-          <span style="font-size:14px;font-weight:500" id="fp-joined">—</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-          <span style="color:var(--muted);font-size:14px">Avg. steps per day</span>
-          <span style="font-size:14px;font-weight:500" id="fp-avg">—</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:14px">Display Name</span>
+          <span id="fp-name-text" onclick="openNicknameModal()" style="font-size:14px;font-weight:600;cursor:pointer;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:14px 18px">
-          <span style="color:var(--muted);font-size:14px">Last sync</span>
-          <span style="font-size:14px;font-weight:500" id="fp-last-sync">—</span>
+          <span style="color:var(--muted);font-size:14px">Date Joined</span>
+          <span style="font-size:14px;font-weight:500" id="fp-joined">—</span>
         </div>
       </div>
-      <button class="btn btn-danger" style="width:100%" onclick="removeFriendFromProfile()" id="fp-remove-btn">Remove Friend</button>
+
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-danger" style="flex:1" onclick="removeFriendFromProfile()">Remove Friend</button>
+        <button class="btn btn-primary" style="flex:1" onclick="closeFriendProfile()">OK</button>
+      </div>
     </div>
   </div>
 
@@ -1159,24 +1141,11 @@ window.openFriendProfile = async function(uid) {
   else avatarEl.textContent = displayName[0].toUpperCase();
 
   document.getElementById('fp-name-text').textContent = nick || displayName;
-  const nickShown = document.getElementById('fp-nickname-shown');
-  if (nick) { nickShown.textContent = displayName; nickShown.style.display = 'block'; }
-  else nickShown.style.display = 'none';
 
   const userSnap = await getDoc(doc(db, 'users', uid));
   const userData = userSnap.exists() ? userSnap.data() : {};
   const joined = userData.createdAt?.toDate?.();
-  document.getElementById('fp-joined').textContent = joined ? joined.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
-
-  const steps = friendSteps[uid] || {};
-  const vals = Object.values(steps);
-  const days = Object.keys(steps).length;
-  const avg = days > 0 ? Math.round(vals.reduce((a,b)=>a+b,0)/days) : 0;
-  document.getElementById('fp-avg').textContent = avg.toLocaleString() + ' steps';
-
-  const dates = Object.keys(steps).sort();
-  const lastDate = dates[dates.length-1];
-  document.getElementById('fp-last-sync').textContent = lastDate ? new Date(lastDate+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : 'Never';
+  document.getElementById('fp-joined').textContent = joined ? joined.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) : '—';
 
   showScreen('friend-profile');
 }
@@ -1208,8 +1177,8 @@ window.saveNickname = async function() {
   await updateDoc(doc(db, 'friends', currentUser.uid, 'list', uid), { nickname: val || deleteField() });
   if (friendsData[uid]) friendsData[uid].nickname = val;
   closeNicknameModal();
-  openFriendProfile(uid);
-  renderManageFriends();
+  const displayName = friendProfiles[uid]?.displayName || 'No Display Name';
+  document.getElementById('fp-name-text').textContent = val || displayName;
   renderLeaderboard();
   showToast(val ? 'Nickname saved ✓' : 'Nickname cleared', 'success');
 }
