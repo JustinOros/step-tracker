@@ -697,9 +697,9 @@ function todayKey() {
 
 function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function avatarHtml(profile, size=40) {
-  const name = profile?.displayName || 'No Display Name';
-  const initial = name[0].toUpperCase();
+function avatarHtml(profile, size=40, nickname='') {
+  const displayName = profile?.displayName || 'No Display Name';
+  const initial = (nickname || displayName)[0].toUpperCase();
   const url = profile?.avatarUrl || '';
   if (url) return `<div class="lb-avatar" style="width:${size}px;height:${size}px"><img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'"></div>`;
   return `<div class="lb-avatar" style="width:${size}px;height:${size}px">${initial}</div>`;
@@ -996,7 +996,8 @@ function renderLeaderboard() {
     const rank = i + 1;
     const rankClass = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
     const name = e.isMe ? (currentProfileData?.displayName || 'Me') : getFriendDisplayName(e.uid);
-    const avatar = avatarHtml(e.profile, 40);
+    const nick = e.isMe ? '' : (friendsData[e.uid]?.nickname || '');
+    const avatar = avatarHtml(e.profile, 40, nick);
     return `
       <div class="lb-row${e.isMe?' is-me':''}" ${e.isMe ? '' : `data-uid="${e.uid}"`} style="${e.isMe?'cursor:default':''}">
         <div class="lb-rank ${rankClass}">${rank}</div>
@@ -1163,7 +1164,7 @@ window.openFriendProfile = async function(uid) {
 
   const avatarEl = document.getElementById('fp-avatar');
   if (profile.avatarUrl) avatarEl.innerHTML = `<img src="${esc(profile.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  else avatarEl.textContent = displayName[0].toUpperCase();
+  else avatarEl.textContent = (nick || displayName)[0].toUpperCase();
 
   document.getElementById('fp-name-text').textContent = nick || displayName;
 
