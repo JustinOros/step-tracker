@@ -41,8 +41,8 @@ A private step tracking web app that syncs steps from your phone and lets you co
 4. Select **Steps** → set Date Range to **Default** → set schedule to **Daily**
 
 ### Android
-1. Download the **StepMates Sync** Android app from GitHub:
-   https://github.com/JustinOros/step-tracker/releases/latest
+1. Download the **StepMates Sync** Android app:
+   [Download StepMates-Sync-Android.apk](https://github.com/JustinOros/step-tracker/releases/download/v1.1/StepMates-Sync-Android.apk)
 2. Install it (allow unknown sources when prompted)
 3. Sign in to StepMates in your browser → hamburger menu → **Setup & Sync** → copy your Webhook URL
 4. Open the StepMates Sync app → paste your Webhook URL → tap **Sync My Steps**
