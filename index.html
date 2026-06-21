@@ -919,6 +919,7 @@ function loadFriendsRealtime() {
       .map(([uid]) => uid);
     await loadFriendProfilesAndSteps(approvedUids);
     renderLeaderboard();
+    renderPendingRequests();
     renderManageFriends();
     updateBadge();
   });
@@ -1004,12 +1005,11 @@ function renderLeaderboard() {
 window.showMoreLb = function() { lbVisibleCount += 10; renderLeaderboard(); }
 
 // MANAGE FRIENDS
-function renderManageFriends() {
-  const fml = document.getElementById('friends-manage-list');
-  if (!fml) return;
+function renderPendingRequests() {
   const pendingUids = getPendingFriendUids();
   const prSection = document.getElementById('pending-received-section');
   const prList = document.getElementById('pending-received-list');
+  if (!prSection || !prList) return;
   if (pendingUids.length > 0) {
     prSection.style.display = 'block';
     prList.innerHTML = pendingUids.map(uid => {
@@ -1029,6 +1029,11 @@ function renderManageFriends() {
   } else {
     prSection.style.display = 'none';
   }
+}
+
+function renderManageFriends() {
+  const fml = document.getElementById('friends-manage-list');
+  if (!fml) return;
 
   const search = (document.getElementById('friends-search')?.value || '').toLowerCase();
   const mutualUids = getMutualFriendUids();
@@ -1041,7 +1046,6 @@ function renderManageFriends() {
 
   filtered.sort((a,b) => (friendsData[b]?.addedAt?.toMillis?.() || 0) - (friendsData[a]?.addedAt?.toMillis?.() || 0));
 
-  const fml = document.getElementById('friends-manage-list');
   if (filtered.length === 0) {
     fml.innerHTML = `<div class="empty-state" style="padding:24px 0"><div class="es-icon">🤝</div><h3>${search?'No matches':'No friends yet'}</h3><p>${search?'Try a different search.':'Tap + Invite to add your first StepMate.'}</p></div>`;
     document.getElementById('friends-show-more').style.display = 'none';
