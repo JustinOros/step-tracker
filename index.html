@@ -730,8 +730,11 @@ function getFriendDisplayName(uid) {
   return nick || displayName;
 }
 
+let _initializingUser = false;
+
 // AUTH
 onAuthStateChanged(auth, async (user) => {
+  if (_initializingUser) return;
   if (isSignInWithEmailLink(auth, window.location.href)) {
     const urlParams = new URLSearchParams(window.location.search);
     const email = urlParams.get('email') || localStorage.getItem('emailForSignIn');
@@ -774,6 +777,7 @@ window.confirmEmailSignIn = async function() {
 }
 
 async function initUser(user) {
+  _initializingUser = true;
   currentUser = user;
   const userRef = doc(db, 'users', user.uid);
   const snap = await getDoc(userRef);
@@ -1306,6 +1310,7 @@ window.signInWithGoogle = async function() {
   try {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
+    _initializingUser = true;
     await initUser(result.user);
   } catch(e) {
     btn.disabled = false;
