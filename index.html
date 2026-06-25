@@ -650,10 +650,8 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-if (!isIOS) {
-  document.getElementById('google-signin-btn').style.display = 'flex';
-  document.getElementById('google-divider').style.display = 'flex';
-}
+document.getElementById('google-signin-btn').style.display = 'flex';
+document.getElementById('google-divider').style.display = 'flex';
 
 let currentUser = null;
 let currentUserData = null;
