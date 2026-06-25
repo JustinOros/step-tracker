@@ -731,18 +731,24 @@ function getFriendDisplayName(uid) {
 let _initializingUser = false;
 
 // AUTH
+if (isIOS) {
+  getRedirectResult(auth).then(async (result) => {
+    if (result?.user) {
+      _initializingUser = true;
+      await initUser(result.user);
+    }
+  }).catch(e => console.warn('Redirect result:', e.code));
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (_initializingUser) return;
-
-  if (isIOS) {
-    try {
-      const redirectResult = await getRedirectResult(auth);
-      if (redirectResult?.user) {
-        _initializingUser = true;
-        await initUser(redirectResult.user);
-        return;
-      }
-    } catch(e) { console.warn('Redirect result:', e.code); }
+  if (isIOS && !user) {
+    setTimeout(() => {
+      if (_initializingUser) return;
+      if (isSignInWithEmailLink(auth, window.location.href)) return;
+      showScreen('auth');
+    }, 1500);
+    return;
   }
 
   if (isSignInWithEmailLink(auth, window.location.href)) {
