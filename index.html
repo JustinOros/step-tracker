@@ -590,8 +590,12 @@
     </div>
     <label for="profile-name-input">Display name</label>
     <input type="text" id="profile-name-input" placeholder="e.g. Alex or RunnerAlex" maxlength="30">
-    <label for="profile-avatar-input">Avatar image URL <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted)">(optional)</span></label>
-    <input type="text" id="profile-avatar-input" placeholder="https://example.com/photo.jpg">
+    <label>Avatar Emoji</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <div id="emoji-preview" style="width:48px;height:48px;border-radius:50%;background:var(--surface-2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🏃</div>
+      <input type="text" id="profile-avatar-input" placeholder="Tap to pick an emoji" maxlength="2" style="flex:1;font-size:24px;text-align:center;cursor:pointer" readonly onclick="this.removeAttribute('readonly');this.focus()" onfocus="this.removeAttribute('readonly')" oninput="updateEmojiPreview(this.value)">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Click the field and use your emoji keyboard, or type an emoji directly</div>
     <div class="error-msg" id="profile-error" style="display:none"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
@@ -1352,7 +1356,8 @@ window.showAuthForm = function() {
 // PROFILE MODAL
 window.openProfileModal = function() {
   document.getElementById('profile-name-input').value = currentProfileData?.displayName || '';
-  document.getElementById('profile-avatar-input').value = currentProfileData?.avatarUrl || '';
+  const avatarUrl = currentProfileData?.avatarUrl || '';
+  document.getElementById('profile-avatar-input').value = isEmoji(avatarUrl) ? avatarUrl : '';
   document.getElementById('profile-error').style.display = 'none';
   updateProfilePreview();
   document.getElementById('profile-modal').classList.add('open');
@@ -1360,14 +1365,22 @@ window.openProfileModal = function() {
 }
 window.closeProfileModal = function() { document.getElementById('profile-modal').classList.remove('open'); }
 window.closeProfileModalOutside = function(e) { if (e.target===document.getElementById('profile-modal')) closeProfileModal(); }
+function updateEmojiPreview(val) {
+  const preview = document.getElementById('emoji-preview');
+  if (!preview) return;
+  const emoji = val.trim();
+  preview.textContent = emoji || '🏃';
+}
 function updateProfilePreview() {
   const name = document.getElementById('profile-name-input').value.trim() || 'Your Name';
   const url = document.getElementById('profile-avatar-input').value.trim();
   const initial = name[0].toUpperCase();
   document.getElementById('profile-modal-name-preview').textContent = name;
   const avatarEl = document.getElementById('profile-modal-avatar');
-  if (url) avatarEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
+  if (url && isEmoji(url)) avatarEl.innerHTML = `<span style="font-size:28px">${url}</span>`;
+  else if (url) avatarEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
   else avatarEl.innerHTML = `<span id="profile-modal-initial">${initial}</span>`;
+  updateEmojiPreview(url);
 }
 window.saveProfile = async function() {
   const name = document.getElementById('profile-name-input').value.trim();
@@ -1375,7 +1388,7 @@ window.saveProfile = async function() {
   const errEl = document.getElementById('profile-error');
   errEl.style.display = 'none';
   if (!name || name.length < 2) { errEl.textContent = 'Display name must be at least 2 characters.'; errEl.style.display = 'block'; return; }
-  if (avatarUrl && !avatarUrl.startsWith('http')) { errEl.textContent = 'Avatar URL must start with http:// or https://'; errEl.style.display = 'block'; return; }
+  if (avatarUrl && !avatarUrl.startsWith('http') && !isEmoji(avatarUrl)) { errEl.textContent = 'Please enter a valid emoji'; errEl.style.display = 'block'; return; }
   const btn = document.querySelector('#profile-modal .btn-primary');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
   try {
