@@ -1195,8 +1195,13 @@ window.openFriendProfile = async function(uid) {
   const displayName = profile.displayName || 'No Display Name';
 
   const avatarEl = document.getElementById('fp-avatar');
-  if (profile.avatarUrl) avatarEl.innerHTML = `<img src="${esc(profile.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  else avatarEl.textContent = (nick || displayName)[0].toUpperCase();
+  if (profile.avatarUrl && isEmoji(profile.avatarUrl)) {
+    avatarEl.innerHTML = `<span style="font-size:32px">${profile.avatarUrl}</span>`;
+  } else if (profile.avatarUrl) {
+    avatarEl.innerHTML = `<img src="${esc(profile.avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    avatarEl.textContent = (nick || displayName)[0].toUpperCase();
+  }
 
   document.getElementById('fp-name-text').textContent = nick || displayName;
 
