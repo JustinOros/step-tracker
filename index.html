@@ -593,9 +593,9 @@
     <label>Avatar Emoji</label>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
       <div id="emoji-preview" style="width:48px;height:48px;border-radius:50%;background:var(--surface-2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">🏃</div>
-      <input type="text" id="profile-avatar-input" placeholder="Tap to pick an emoji" maxlength="2" style="flex:1;font-size:24px;text-align:center;cursor:pointer" readonly onclick="this.removeAttribute('readonly');this.focus()" onfocus="this.removeAttribute('readonly')" oninput="updateEmojiPreview(this.value)">
+      <input type="text" id="profile-avatar-input" placeholder="Click here, then press the emoji key (⊞+. on Windows, Ctrl+Cmd+Space on Mac, or emoji keyboard on mobile)" style="flex:1;font-size:24px;text-align:center" oninput="updateEmojiPreview(this.value)">
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Click the field and use your emoji keyboard, or type an emoji directly</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Mac: <strong>Ctrl+Cmd+Space</strong> · Windows: <strong>Win+.</strong> · Mobile: switch to emoji keyboard</div>
     <div class="error-msg" id="profile-error" style="display:none"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
@@ -731,8 +731,8 @@ function avatarHtml(profile, size=40, nickname='') {
   const initial = (nickname || displayName)[0].toUpperCase();
   const url = profile?.avatarUrl || '';
   if (url && isEmoji(url)) return `<div class="lb-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.55)}px">${url}</div>`;
-  if (url) return `<div class="lb-avatar" style="width:${size}px;height:${size}px"><img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'"></div>`;
-  return `<div class="lb-avatar" style="width:${size}px;height:${size}px">${initial}</div>`;
+  if (url && url.startsWith('http')) return `<div class="lb-avatar" style="width:${size}px;height:${size}px"><img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='🏃'"></div>`;
+  return `<div class="lb-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.55)}px">🏃</div>`;
 }
 
 function getFriendDisplayName(uid) {
@@ -893,8 +893,8 @@ function refreshProfileUI() {
 
 function setAvatarEl(wrapEl, initialId, initial, url, size) {
   if (url && isEmoji(url)) wrapEl.innerHTML = `<span style="font-size:${Math.round(size*0.55)}px">${url}</span>`;
-  else if (url) wrapEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
-  else wrapEl.innerHTML = `<span id="${initialId}">${initial}</span>`;
+  else if (url && url.startsWith('http')) wrapEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='🏃'">`;
+  else wrapEl.innerHTML = `<span style="font-size:${Math.round(size*0.55)}px">🏃</span>`;
 }
 
 function checkSetupReminder() {
