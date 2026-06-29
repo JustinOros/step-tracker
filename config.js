@@ -11,5 +11,6 @@ window.STEPMATES_CONFIG = {
   adminNotifyUrl: "https://adminnotify-mgc3i5pbxq-uc.a.run.app",
   sendMagicLinkUrl: "https://sendmagiclink-mgc3i5pbxq-uc.a.run.app",
   friendRequestUrl: "https://friendrequest-mgc3i5pbxq-uc.a.run.app",
+  acceptFriendUrl: "https://acceptfriendrequest-mgc3i5pbxq-uc.a.run.app",
   appUrl: "https://justinoros.github.io/step-tracker"
 };
