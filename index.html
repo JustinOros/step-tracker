@@ -716,10 +716,17 @@ function todayKey() {
 
 function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+function isEmoji(str) {
+  if (!str) return false;
+  const cp = str.codePointAt(0);
+  return (cp >= 0x1F300 && cp <= 0x1FAFF) || (cp >= 0x2600 && cp <= 0x27BF) || (cp >= 0xFE00 && cp <= 0xFE0F);
+}
+
 function avatarHtml(profile, size=40, nickname='') {
   const displayName = profile?.displayName || 'No Display Name';
   const initial = (nickname || displayName)[0].toUpperCase();
   const url = profile?.avatarUrl || '';
+  if (url && isEmoji(url)) return `<div class="lb-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.55)}px">${url}</div>`;
   if (url) return `<div class="lb-avatar" style="width:${size}px;height:${size}px"><img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'"></div>`;
   return `<div class="lb-avatar" style="width:${size}px;height:${size}px">${initial}</div>`;
 }
@@ -881,7 +888,8 @@ function refreshProfileUI() {
 }
 
 function setAvatarEl(wrapEl, initialId, initial, url, size) {
-  if (url) wrapEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
+  if (url && isEmoji(url)) wrapEl.innerHTML = `<span style="font-size:${Math.round(size*0.55)}px">${url}</span>`;
+  else if (url) wrapEl.innerHTML = `<img src="${esc(url)}" alt="${initial}" onerror="this.parentElement.innerHTML='${initial}'">`;
   else wrapEl.innerHTML = `<span id="${initialId}">${initial}</span>`;
 }
 
