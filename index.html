@@ -803,42 +803,35 @@ async function initUser(user) {
     await setDoc(userRef, {
       email: user.email,
       webhookToken,
-      approved: false,
+      approved: true,
       dailyGoal: 5000,
       createdAt: serverTimestamp()
     });
-    await setDoc(doc(db, 'profiles', user.uid), { displayName: '', avatarUrl: '' });
+    await setDoc(doc(db, 'profiles', user.uid), { displayName: user.displayName || '', avatarUrl: '🏃' });
     await setDoc(doc(db, 'steps', user.uid), { stepsByDate: {} });
-    currentUserData = { email: user.email, webhookToken, approved: false, dailyGoal: 5000 };
-    await notifyAdminOfNewUser(user.email, user.uid);
-    showScreen('pending');
+    currentUserData = { email: user.email, webhookToken, approved: true, dailyGoal: 5000 };
+    const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
+    currentProfileData = profileSnap.exists() ? profileSnap.data() : {};
+    currentStepsData = {};
+    loadDashboard();
   } else {
     currentUserData = snap.data();
-    if (currentUserData.approved === false) {
-      showScreen('pending');
-    } else if (!currentUserData.setupComplete) {
-      const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
-      currentProfileData = profileSnap.exists() ? profileSnap.data() : {};
-      const stepsSnap = await getDoc(doc(db, 'steps', user.uid));
-      currentStepsData = stepsSnap.exists() ? stepsSnap.data().stepsByDate || {} : {};
-      showScreen('onboarding');
-      document.getElementById('ob-webhook-url').textContent = buildWebhookUrl(currentUserData.webhookToken);
-    } else {
-      const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
-      currentProfileData = profileSnap.exists() ? profileSnap.data() : {};
-      const stepsSnap = await getDoc(doc(db, 'steps', user.uid));
-      currentStepsData = stepsSnap.exists() ? stepsSnap.data().stepsByDate || {} : {};
-      loadDashboard();
-      const pendingCount = getPendingFriendUids().length;
-      if (pendingCount > 0) switchPanel('friends');
+    if (!currentUserData.setupComplete && currentUserData.approved === false) {
+      await updateDoc(userRef, { approved: true });
+      currentUserData.approved = true;
     }
+    const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
+    currentProfileData = profileSnap.exists() ? profileSnap.data() : {};
+    const stepsSnap = await getDoc(doc(db, 'steps', user.uid));
+    currentStepsData = stepsSnap.exists() ? stepsSnap.data().stepsByDate || {} : {};
+    loadDashboard();
+    const pendingCount = getPendingFriendUids().length;
+    if (pendingCount > 0) switchPanel('friends');
   }
 }
 
 async function notifyAdminOfNewUser(email, uid) {
-  try {
-    await fetch(`${window.STEPMATES_CONFIG.adminNotifyUrl}?uid=${uid}&email=${encodeURIComponent(email)}`);
-  } catch(e) { console.warn('Admin notify failed', e); }
+  // Admin approval removed - auto-approval enabled
 }
 
 // ONBOARDING
