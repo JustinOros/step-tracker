@@ -948,10 +948,10 @@ function loadFriendsRealtime() {
     friendSteps = {};
     snap.forEach(d => { friendsData[d.id] = d.data(); });
     const approvedUids = Object.entries(friendsData)
-      .filter(([uid, data]) => data.approved === true && data.enabled === true)
+      .filter(([uid, data]) => data.status === 'active')
       .map(([uid]) => uid);
     const pendingUids = Object.entries(friendsData)
-      .filter(([uid, data]) => data.approved === false && data.enabled !== false)
+      .filter(([uid, data]) => data.status === 'pending')
       .map(([uid]) => uid);
     await loadFriendProfilesAndSteps(approvedUids);
     for (const uid of pendingUids) {
@@ -982,13 +982,13 @@ function loadFriendsRealtime() {
 
 function getMutualFriendUids() {
   return Object.entries(friendsData)
-    .filter(([uid, data]) => data.approved === true && data.enabled === true)
+    .filter(([uid, data]) => data.status === 'active')
     .map(([uid]) => uid);
 }
 
 function getPendingFriendUids() {
   return Object.entries(friendsData)
-    .filter(([uid, data]) => data.approved === false && data.enabled !== false)
+    .filter(([uid, data]) => data.status === 'pending')
     .map(([uid]) => uid);
 }
 
@@ -1168,7 +1168,7 @@ window.bulkRemoveFriends = async function() {
 async function doRemoveFriend(friendUid) {
   const idToken = await currentUser.getIdToken();
   await fetch(`${window.STEPMATES_CONFIG.friendRequestUrl}?action=remove&fromUid=${currentUser.uid}&toUid=${friendUid}&idToken=${idToken}`);
-  if (friendsData[friendUid]) friendsData[friendUid].enabled = false;
+  if (friendsData[friendUid]) friendsData[friendUid].status = 'removed';
   delete friendProfiles[friendUid];
   delete friendSteps[friendUid];
   renderLeaderboard();
@@ -1176,13 +1176,19 @@ async function doRemoveFriend(friendUid) {
 }
 
 window.approveFriend = async function(uid) {
-  await updateDoc(doc(db, 'friends', currentUser.uid, 'list', uid), { approved: true });
-  await loadFriendProfilesAndSteps([uid]);
-  showToast('Friend added! 🎉', 'success');
+  try {
+    const idToken = await currentUser.getIdToken();
+    await fetch(`${STEPMATES_CONFIG.acceptFriendUrl}?fromUid=${currentUser.uid}&requesterUid=${uid}&idToken=${encodeURIComponent(idToken)}`);
+    await loadFriendProfilesAndSteps([uid]);
+    showToast('Friend added! 🎉', 'success');
+  } catch(e) {
+    await updateDoc(doc(db, 'friends', currentUser.uid, 'list', uid), { status: 'active' });
+    showToast('Friend added! 🎉', 'success');
+  }
 }
 
 window.denyFriend = async function(uid) {
-  await updateDoc(doc(db, 'friends', currentUser.uid, 'list', uid), { enabled: false });
+  await updateDoc(doc(db, 'friends', currentUser.uid, 'list', uid), { status: 'removed' });
   showToast('Request declined', '');
 }
 
