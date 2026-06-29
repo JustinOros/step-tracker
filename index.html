@@ -529,9 +529,13 @@
           <span style="color:var(--muted);font-size:14px">Display Name</span>
           <span id="fp-name-text" onclick="openNicknameModal()" style="font-size:14px;font-weight:600;cursor:pointer;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted">—</span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:14px 18px">
+        <div style="display:flex;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
           <span style="color:var(--muted);font-size:14px">Date Joined</span>
           <span style="font-size:14px;font-weight:500" id="fp-joined">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:14px 18px">
+          <span style="color:var(--muted);font-size:14px">Last Synced</span>
+          <span style="font-size:14px;font-weight:500" id="fp-last-synced">—</span>
         </div>
       </div>
 
@@ -1217,6 +1221,16 @@ window.openFriendProfile = async function(uid) {
 
   const addedAt = friendsData[uid]?.addedAt?.toDate?.();
   document.getElementById('fp-joined').textContent = addedAt ? addedAt.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) : '—';
+
+  try {
+    const stepsDoc = await getDoc(doc(db, 'steps', uid));
+    const syncTs = stepsDoc.data()?.lastSynced?.toDate?.();
+    document.getElementById('fp-last-synced').textContent = syncTs
+      ? syncTs.toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'})
+      : 'Never';
+  } catch(e) {
+    document.getElementById('fp-last-synced').textContent = 'Never';
+  }
 
   showScreen('friend-profile');
 }
