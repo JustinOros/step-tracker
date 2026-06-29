@@ -951,7 +951,7 @@ function loadFriendsRealtime() {
       .filter(([uid, data]) => data.status === 'active')
       .map(([uid]) => uid);
     const pendingUids = Object.entries(friendsData)
-      .filter(([uid, data]) => data.status === 'pending')
+      .filter(([uid, data]) => data.status === 'pending' && data.initiator !== 'me')
       .map(([uid]) => uid);
     await loadFriendProfilesAndSteps(approvedUids);
     for (const uid of pendingUids) {
@@ -988,7 +988,7 @@ function getMutualFriendUids() {
 
 function getPendingFriendUids() {
   return Object.entries(friendsData)
-    .filter(([uid, data]) => data.status === 'pending')
+    .filter(([uid, data]) => data.status === 'pending' && data.initiator !== 'me')
     .map(([uid]) => uid);
 }
 
